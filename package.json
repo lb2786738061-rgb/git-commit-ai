@@ -1,0 +1,29 @@
+{
+  "name": "git-commit-ai",
+  "version": "1.0.0",
+  "description": "An interactive CLI tool that generates professional git commit messages using AI based on staged changes.",
+  "type": "module",
+  "bin": {
+    "git-commit-ai": "./bin/cli.js",
+    "gca": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "ai",
+    "openai",
+    "conventional-commits",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "ora": "^8.0.1",
+    "picocolors": "^1.0.1",
+    "prompts": "^2.4.2"
+  }
+}
