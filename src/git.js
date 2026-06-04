@@ -13,13 +13,34 @@ export function isGitRepository() {
   }
 }
 
+const EXCLUDE_PATTERNS = [
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lockb',
+  '*.png',
+  '*.jpg',
+  '*.jpeg',
+  '*.gif',
+  '*.svg',
+  '*.webp',
+  '*.ico',
+  '*.pdf',
+  '*.zip',
+  '*.gz',
+  '*.tar',
+  '*.mp4',
+  '*.mp3'
+];
+
 /**
- * Returns the staged changes (git diff --cached).
+ * Returns the staged changes (git diff --cached) with lockfiles and media files filtered out.
  * @returns {string}
  */
 export function getStagedDiff() {
   try {
-    return execFileSync('git', ['diff', '--cached'], {
+    const excludeArgs = EXCLUDE_PATTERNS.map(pattern => `:(exclude)${pattern}`);
+    return execFileSync('git', ['diff', '--cached', '--', '.', ...excludeArgs], {
       stdio: 'pipe',
       maxBuffer: 15 * 1024 * 1024 // 15MB buffer limit for massive diffs
     }).toString();
@@ -79,5 +100,19 @@ export function commitChanges(message) {
   } catch (error) {
     const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
     throw new Error(errMsg || 'Git commit failed.');
+  }
+}
+
+/**
+ * Pushes the committed changes to the remote repository.
+ * @returns {string} The git push output
+ */
+export function pushChanges() {
+  try {
+    const output = execFileSync('git', ['push'], { stdio: 'pipe' });
+    return output.toString();
+  } catch (error) {
+    const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
+    throw new Error(errMsg || 'Git push failed.');
   }
 }

@@ -5,7 +5,7 @@ import ora from 'ora';
 import pc from 'picocolors';
 import prompts from 'prompts';
 import { readConfig, writeConfig, getConfigFilePath } from '../src/config.js';
-import { isGitRepository, getStagedDiff, getStagedFiles, getUnstagedFiles, commitChanges } from '../src/git.js';
+import { isGitRepository, getStagedDiff, getStagedFiles, getUnstagedFiles, commitChanges, pushChanges } from '../src/git.js';
 import { generateCommitMessage } from '../src/ai.js';
 
 const program = new Command();
@@ -147,6 +147,7 @@ async function displayInteractiveMenu(commitMessage, diff) {
     name: 'action',
     message: 'Select action for this message:',
     choices: [
+      { title: pc.green('Accept, Commit and Push'), value: 'commit_push' },
       { title: pc.green('Accept and Commit'), value: 'commit' },
       { title: pc.yellow('Edit message manually'), value: 'edit' },
       { title: pc.blue('Regenerate message'), value: 'regenerate' },
@@ -154,8 +155,10 @@ async function displayInteractiveMenu(commitMessage, diff) {
     ]
   });
 
-  if (response.action === 'commit') {
-    executeCommit(commitMessage);
+  if (response.action === 'commit_push') {
+    executeCommit(commitMessage, true);
+  } else if (response.action === 'commit') {
+    executeCommit(commitMessage, false);
   } else if (response.action === 'edit') {
     const editResponse = await prompts({
       type: 'text',
@@ -166,7 +169,13 @@ async function displayInteractiveMenu(commitMessage, diff) {
     });
 
     if (editResponse.editedMessage) {
-      executeCommit(editResponse.editedMessage);
+      const pushConfirm = await prompts({
+        type: 'confirm',
+        name: 'shouldPush',
+        message: 'Push changes to remote repository?',
+        initial: true
+      });
+      executeCommit(editResponse.editedMessage, pushConfirm.shouldPush);
     } else {
       console.log(pc.yellow('Edit aborted. Returning to options.'));
       await displayInteractiveMenu(commitMessage, diff);
@@ -183,15 +192,38 @@ async function displayInteractiveMenu(commitMessage, diff) {
 /**
  * Executes final git commit logic.
  * @param {string} message 
+ * @param {boolean} [shouldPush=false]
  */
-function executeCommit(message) {
+function executeCommit(message, shouldPush = false) {
   const spinner = ora(pc.cyan('Creating commit...')).start();
   try {
     const output = commitChanges(message);
     spinner.succeed(pc.green('Commit created!'));
     console.log(pc.dim(`\n${output.trim()}\n`));
+    
+    if (shouldPush) {
+      executePush();
+    }
   } catch (error) {
     spinner.fail(pc.red('Failed to commit staged changes.'));
+    console.error(`\n${pc.bold('Git Output:')} ${pc.red(error.message)}\n`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Executes git push logic.
+ */
+function executePush() {
+  const spinner = ora(pc.cyan('Pushing changes to remote...')).start();
+  try {
+    const output = pushChanges();
+    spinner.succeed(pc.green('Changes pushed successfully!'));
+    if (output.trim()) {
+      console.log(pc.dim(`\n${output.trim()}\n`));
+    }
+  } catch (error) {
+    spinner.fail(pc.red('Failed to push changes to remote repository.'));
     console.error(`\n${pc.bold('Git Output:')} ${pc.red(error.message)}\n`);
     process.exit(1);
   }
