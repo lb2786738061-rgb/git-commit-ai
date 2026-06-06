@@ -59,6 +59,108 @@ program
     console.log(pc.dim('Use "git-commit-ai config --list" to view configuration, or "git-commit-ai config --set key=value" to update.'));
   });
 
+// 交互式配置初始化命令
+program
+  .command('init')
+  .description('交互式配置初始化向导')
+  .action(async () => {
+    console.log(pc.cyan(pc.bold('\n⚙️  Git Commit AI - 初始化配置向导')));
+    console.log(pc.dim('请按照提示输入或选择您的配置信息：\n'));
+
+    const currentConfig = readConfig();
+
+    try {
+      const response = await prompts([
+        {
+          type: 'password',
+          name: 'apiKey',
+          message: currentConfig.apiKey 
+            ? '输入您的 API 密钥 (直接回车保持现有密钥)：' 
+            : '输入您的 API 密钥：',
+          initial: currentConfig.apiKey || '',
+          validate: val => val.trim().length > 0 ? true : '密钥不能为空。'
+        },
+        {
+          type: 'text',
+          name: 'apiBase',
+          message: '输入接口基础地址：',
+          initial: currentConfig.apiBase || 'https://api.openai.com/v1',
+          validate: val => {
+            if (val.trim().length === 0) return '接口地址不能为空。';
+            try {
+              new URL(val.trim());
+              return true;
+            } catch (_) {
+              return '请输入合法的地址格式。';
+            }
+          }
+        },
+        {
+          type: 'select',
+          name: 'modelSelect',
+          message: '选择首选模型：',
+          choices: [
+            { title: 'gpt-4o-mini (默认推荐)', value: 'gpt-4o-mini' },
+            { title: 'gpt-4o', value: 'gpt-4o' },
+            { title: 'deepseek-chat', value: 'deepseek-chat' },
+            { title: '自定义模型...', value: 'custom' }
+          ],
+          initial: (() => {
+            const models = ['gpt-4o-mini', 'gpt-4o', 'deepseek-chat'];
+            const idx = models.indexOf(currentConfig.model);
+            return idx !== -1 ? idx : 3;
+          })()
+        },
+        {
+          type: prev => prev === 'custom' ? 'text' : null,
+          name: 'customModel',
+          message: '输入您的自定义模型名称：',
+          initial: currentConfig.model && !['gpt-4o-mini', 'gpt-4o', 'deepseek-chat'].includes(currentConfig.model) 
+            ? currentConfig.model 
+            : '',
+          validate: val => val.trim().length > 0 ? true : '模型名称不能为空。'
+        },
+        {
+          type: 'select',
+          name: 'convention',
+          message: '选择提交规范样式：',
+          choices: [
+            { title: 'angular 规范', value: 'angular' }
+          ],
+          initial: 0
+        }
+      ]);
+
+      // 处理用户取消输入的情况
+      if (response.apiKey === undefined || response.apiBase === undefined || response.modelSelect === undefined || response.convention === undefined) {
+        console.log(pc.yellow('\n配置向导已取消。'));
+        return;
+      }
+
+      const finalModel = response.modelSelect === 'custom' ? response.customModel : response.modelSelect;
+
+      writeConfig({
+        apiKey: response.apiKey.trim(),
+        apiBase: response.apiBase.trim(),
+        model: finalModel.trim(),
+        convention: response.convention
+      });
+
+      console.log(pc.green('\n✓ 配置文件初始化成功！'));
+      console.log(pc.dim(`配置文件路径: ${getConfigFilePath()}\n`));
+      
+      const config = readConfig();
+      console.log(`  ${pc.bold('API 密钥:')}     ${config.apiKey ? pc.green('••••••••' + config.apiKey.slice(-4)) : pc.red('未设置')}`);
+      console.log(`  ${pc.bold('接口地址:')}    ${pc.blue(config.apiBase)}`);
+      console.log(`  ${pc.bold('模型名称:')}    ${pc.blue(config.model)}`);
+      console.log(`  ${pc.bold('提交规范:')}    ${pc.blue(config.convention)}`);
+      console.log();
+      console.log(pc.cyan('现在您可以开始提交代码了。运行 gca 体验自动生成提交信息功能！\n'));
+    } catch (err) {
+      console.error(pc.red(`❌ 配置保存失败: ${err.message}`));
+    }
+  });
+
 // Main CLI logic
 program
   .action(async () => {
