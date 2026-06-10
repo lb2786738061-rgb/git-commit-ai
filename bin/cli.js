@@ -51,6 +51,15 @@ program
         return;
       }
 
+      // 验证提交规范样式的值是否合法
+      if (key === 'convention') {
+        const validConventions = ['angular', 'gitmoji'];
+        if (!validConventions.includes(value)) {
+          console.log(pc.red(`❌ 无效的提交规范样式: "${value}"。可选的规范包括: ${validConventions.join(', ')}`));
+          return;
+        }
+      }
+
       writeConfig({ [key]: value });
       console.log(pc.green(`✓ Configuration updated: ${pc.bold(key)} is now set to ${value}`));
       return;
@@ -125,9 +134,10 @@ program
           name: 'convention',
           message: '选择提交规范样式：',
           choices: [
-            { title: 'angular 规范', value: 'angular' }
+            { title: 'angular 规范 (例如: feat: 添加新功能)', value: 'angular' },
+            { title: 'gitmoji 规范 (例如: ✨ feat: 添加新功能)', value: 'gitmoji' }
           ],
-          initial: 0
+          initial: currentConfig.convention === 'gitmoji' ? 1 : 0
         }
       ]);
 

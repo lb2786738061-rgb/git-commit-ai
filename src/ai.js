@@ -1,5 +1,5 @@
 import { readConfig } from './config.js';
-import { SYSTEM_PROMPT, createUserPrompt } from './prompts.js';
+import { getSystemPrompt, createUserPrompt } from './prompts.js';
 
 /**
  * Clean LLM response content, stripping accidental markdown code block wrappers.
@@ -46,7 +46,7 @@ export async function generateCommitMessage(diff) {
       body: JSON.stringify({
         model: config.model,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: getSystemPrompt(config.convention) },
           { role: 'user', content: createUserPrompt(diff, config.convention) }
         ],
         temperature: 0.2
