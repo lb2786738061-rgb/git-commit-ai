@@ -95,7 +95,10 @@ export function getUnstagedFiles() {
  */
 export function commitChanges(message) {
   try {
-    const output = execFileSync('git', ['commit', '-m', message], { stdio: 'pipe' });
+    const output = execFileSync('git', ['commit', '-m', message], {
+      stdio: 'pipe',
+      env: { ...process.env, GCA_BYPASS_HOOK: '1' }
+    });
     return output.toString();
   } catch (error) {
     const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
@@ -116,3 +119,66 @@ export function pushChanges() {
     throw new Error(errMsg || 'Git push failed.');
   }
 }
+
+/**
+ * 根据暂存文件智能检测推荐的提交范围 (Scope)。
+ * @param {string[]} files 
+ * @returns {string} 推荐的范围
+ */
+export function detectScope(files) {
+  if (!files || files.length === 0) return '';
+  
+  // 忽略常见的开发无关、通用顶层或测试顶层目录
+  const ignoreDirs = new Set(['src', 'lib', 'app', 'tests', 'test', 'spec', 'packages']);
+  const scopes = [];
+
+  for (const file of files) {
+    const normalized = file.replace(/\\/g, '/');
+    const parts = normalized.split('/');
+    
+    // 如果是在根目录下的文件，例如 package.json, 可以推荐 "npm"
+    if (parts.length <= 1) {
+      if (parts[0] === 'package.json' || parts[0] === 'package-lock.json') {
+        scopes.push('npm');
+      }
+      continue;
+    }
+    
+    // 寻找非忽略的第一个目录作为范围候选
+    let scopeCandidate = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!ignoreDirs.has(part)) {
+        scopeCandidate = part;
+        break;
+      }
+    }
+    
+    // 如果所有目录都是被忽略的（比如 src/index.js），则使用第一层目录名称（例如 "src"）
+    if (!scopeCandidate && parts.length > 1) {
+      scopeCandidate = parts[0];
+    }
+    
+    if (scopeCandidate) {
+      scopes.push(scopeCandidate.toLowerCase());
+    }
+  }
+
+  if (scopes.length === 0) return '';
+
+  // 统计每个范围出现的频次
+  const counts = {};
+  let maxCount = 0;
+  let dominantScope = '';
+
+  for (const s of scopes) {
+    counts[s] = (counts[s] || 0) + 1;
+    if (counts[s] > maxCount) {
+      maxCount = counts[s];
+      dominantScope = s;
+    }
+  }
+
+  return dominantScope;
+}
+

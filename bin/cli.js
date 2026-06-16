@@ -4,8 +4,11 @@ import { Command } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
 import prompts from 'prompts';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { readConfig, writeConfig, getConfigFilePath } from '../src/config.js';
-import { isGitRepository, getStagedDiff, getStagedFiles, getUnstagedFiles, commitChanges, pushChanges } from '../src/git.js';
+import { isGitRepository, getStagedDiff, getStagedFiles, getUnstagedFiles, commitChanges, pushChanges, detectScope } from '../src/git.js';
 import { generateCommitMessage } from '../src/ai.js';
 
 const program = new Command();
@@ -171,9 +174,109 @@ program
     }
   });
 
-// Main CLI logic
+// 获取当前脚本所在路径，以便写入 hook 脚本中以调用本 CLI
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CLI_PATH = path.resolve(__dirname, 'cli.js');
+
+// Git pre-commit 钩子管理命令
 program
-  .action(async () => {
+  .command('hook')
+  .description('管理 Git pre-commit 钩子')
+  .option('-i, --install', '安装 Git pre-commit 钩子，使得在执行 git commit 时自动触发交互')
+  .option('-u, --uninstall', '卸载 Git pre-commit 钩子')
+  .action((options) => {
+    if (!isGitRepository()) {
+      console.error(pc.red('❌ 错误: 当前目录不是一个 Git 仓库。'));
+      process.exit(1);
+    }
+
+    const gitDir = path.join(process.cwd(), '.git');
+    const hooksDir = path.join(gitDir, 'hooks');
+    const hookPath = path.join(hooksDir, 'pre-commit');
+
+    if (options.install) {
+      if (!fs.existsSync(hooksDir)) {
+        fs.mkdirSync(hooksDir, { recursive: true });
+      }
+
+      // 将 Windows 路径中的反斜杠转换为正斜杠，保证在 Git Bash 环境中可正常执行
+      const normalizedCliPath = CLI_PATH.replace(/\\/g, '/');
+      const hookContent = `#!/bin/sh
+# git-commit-ai pre-commit hook start
+if [ "$GCA_BYPASS_HOOK" = "1" ]; then
+  exit 0
+fi
+
+# 重定向标准输入到 TTY，使得在 Git 钩子内部能进行交互式选择
+exec < /dev/tty
+
+node "${normalizedCliPath}" --hook
+
+# 钩子拦截外层提交以防止重复提交。无论成功还是取消，都返回 1 以中止外层 commit。
+exit 1
+# git-commit-ai pre-commit hook end
+`;
+
+      let existingContent = '';
+      if (fs.existsSync(hookPath)) {
+        existingContent = fs.readFileSync(hookPath, 'utf-8');
+      }
+
+      if (existingContent.includes('git-commit-ai pre-commit hook start')) {
+        console.log(pc.yellow('⚠️  Pre-commit 钩子已安装。'));
+        return;
+      }
+
+      const newContent = existingContent
+        ? `${existingContent}\n${hookContent}`
+        : hookContent;
+
+      fs.writeFileSync(hookPath, newContent, { mode: 0o755 });
+      try {
+        fs.chmodSync(hookPath, '755');
+      } catch (_) {}
+
+      console.log(pc.green('✓ Git pre-commit 钩子安装成功！'));
+      console.log(pc.dim('现在，您直接运行标准的 "git commit" 就会自动触发交互式 AI 提交流程。'));
+      return;
+    }
+
+    if (options.uninstall) {
+      if (!fs.existsSync(hookPath)) {
+        console.log(pc.yellow('⚠️  未找到任何 pre-commit 钩子文件。'));
+        return;
+      }
+
+      const content = fs.readFileSync(hookPath, 'utf-8');
+      if (!content.includes('git-commit-ai pre-commit hook start')) {
+        console.log(pc.yellow('⚠️  未在 pre-commit 钩子文件中找到 git-commit-ai 的相关配置。'));
+        return;
+      }
+
+      const cleanedContent = content.replace(
+        /\n?# git-commit-ai pre-commit hook start[\s\S]*?# git-commit-ai pre-commit hook end\n?/,
+        ''
+      );
+
+      if (cleanedContent.trim() === '' || cleanedContent.trim() === '#!/bin/sh') {
+        fs.unlinkSync(hookPath);
+      } else {
+        fs.writeFileSync(hookPath, cleanedContent, { mode: 0o755 });
+      }
+
+      console.log(pc.green('✓ Git pre-commit 钩子卸载成功。'));
+      return;
+    }
+
+    console.log(pc.dim('请使用 "git-commit-ai hook --install" 安装钩子，或 "git-commit-ai hook --uninstall" 卸载钩子。'));
+  });
+
+// 主 CLI 逻辑
+program
+  .option('--hook', '在 Git pre-commit 钩子环境中运行')
+  .action(async (options) => {
+    const isHook = !!options.hook;
     console.log(pc.cyan(pc.bold('\n✨ Git Commit AI v1.0.0')));
     console.log(pc.dim('Analyzing staged changes to write your commit message...\n'));
 
@@ -206,11 +309,17 @@ program
     if (stagedFiles.length > 5) {
       console.log(`  ...and ${stagedFiles.length - 5} more.`);
     }
+    
+    // 智能检测提交范围
+    const detectedScope = detectScope(stagedFiles);
+    if (detectedScope) {
+      console.log(pc.green(`✓ Recommended scope: ${pc.bold(detectedScope)}`));
+    }
     console.log();
 
     const diff = getStagedDiff();
     
-    // Large diff handling safety limit
+    // 大差异安全限额处理
     const MAX_DIFF_LENGTH = 60000;
     let safeDiff = diff;
     if (diff.length > MAX_DIFF_LENGTH) {
@@ -218,14 +327,16 @@ program
       safeDiff = diff.slice(0, MAX_DIFF_LENGTH) + '\n\n[Diff truncated here due to length limits...]';
     }
 
-    await requestAndHandleMessage(safeDiff);
+    await requestAndHandleMessage(safeDiff, detectedScope, isHook);
   });
 
 /**
- * Initiates the AI generation and interactive response.
+ * 发起 AI 生成并处理后续交互菜单
  * @param {string} diff 
+ * @param {string} detectedScope
+ * @param {boolean} isHook
  */
-async function requestAndHandleMessage(diff) {
+async function requestAndHandleMessage(diff, detectedScope, isHook) {
   const spinner = ora({
     text: pc.cyan('Generating commit message using AI...'),
     color: 'cyan'
@@ -233,7 +344,7 @@ async function requestAndHandleMessage(diff) {
 
   let commitMessage = '';
   try {
-    commitMessage = await generateCommitMessage(diff);
+    commitMessage = await generateCommitMessage(diff, detectedScope);
     spinner.succeed(pc.green('Commit message generated successfully!'));
   } catch (error) {
     spinner.fail(pc.red('Failed to generate commit message.'));
@@ -241,15 +352,17 @@ async function requestAndHandleMessage(diff) {
     process.exit(1);
   }
 
-  await displayInteractiveMenu(commitMessage, diff);
+  await displayInteractiveMenu(commitMessage, diff, detectedScope, isHook);
 }
 
 /**
- * Handles confirmation and secondary actions with generated message.
+ * 确认界面与二次操作选择
  * @param {string} commitMessage 
  * @param {string} diff 
+ * @param {string} detectedScope
+ * @param {boolean} isHook
  */
-async function displayInteractiveMenu(commitMessage, diff) {
+async function displayInteractiveMenu(commitMessage, diff, detectedScope, isHook) {
   console.log(pc.cyan('\n──────────────────────────────────────────────────────────────────────'));
   console.log(pc.bold(pc.white(commitMessage)));
   console.log(pc.cyan('──────────────────────────────────────────────────────────────────────\n'));
@@ -268,9 +381,9 @@ async function displayInteractiveMenu(commitMessage, diff) {
   });
 
   if (response.action === 'commit_push') {
-    executeCommit(commitMessage, true);
+    executeCommit(commitMessage, true, isHook);
   } else if (response.action === 'commit') {
-    executeCommit(commitMessage, false);
+    executeCommit(commitMessage, false, isHook);
   } else if (response.action === 'edit') {
     const editResponse = await prompts({
       type: 'text',
@@ -287,26 +400,27 @@ async function displayInteractiveMenu(commitMessage, diff) {
         message: 'Push changes to remote repository?',
         initial: true
       });
-      executeCommit(editResponse.editedMessage, pushConfirm.shouldPush);
+      executeCommit(editResponse.editedMessage, pushConfirm.shouldPush, isHook);
     } else {
       console.log(pc.yellow('Edit aborted. Returning to options.'));
-      await displayInteractiveMenu(commitMessage, diff);
+      await displayInteractiveMenu(commitMessage, diff, detectedScope, isHook);
     }
   } else if (response.action === 'regenerate') {
     console.log(pc.dim('\nRegenerating...'));
-    await requestAndHandleMessage(diff);
+    await requestAndHandleMessage(diff, detectedScope, isHook);
   } else {
     console.log(pc.yellow('\nCommit cancelled. Your staged changes remain intact.\n'));
-    process.exit(0);
+    process.exit(isHook ? 1 : 0);
   }
 }
 
 /**
- * Executes final git commit logic.
+ * 执行 Git 提交操作
  * @param {string} message 
  * @param {boolean} [shouldPush=false]
+ * @param {boolean} [isHook=false]
  */
-function executeCommit(message, shouldPush = false) {
+function executeCommit(message, shouldPush = false, isHook = false) {
   const spinner = ora(pc.cyan('Creating commit...')).start();
   try {
     const output = commitChanges(message);
@@ -316,6 +430,11 @@ function executeCommit(message, shouldPush = false) {
     if (shouldPush) {
       executePush();
     }
+
+    if (isHook) {
+      console.log(pc.green('✓ [git-commit-ai] Commit created successfully! (Hook process exited)'));
+      process.exit(1); // 退出 1 以拦截外层重复提交
+    }
   } catch (error) {
     spinner.fail(pc.red('Failed to commit staged changes.'));
     console.error(`\n${pc.bold('Git Output:')} ${pc.red(error.message)}\n`);
@@ -324,7 +443,7 @@ function executeCommit(message, shouldPush = false) {
 }
 
 /**
- * Executes git push logic.
+ * 执行 Git 推送操作
  */
 function executePush() {
   const spinner = ora(pc.cyan('Pushing changes to remote...')).start();
@@ -342,3 +461,4 @@ function executePush() {
 }
 
 program.parse(process.argv);
+

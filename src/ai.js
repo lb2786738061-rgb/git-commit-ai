@@ -20,9 +20,10 @@ function cleanResponse(text) {
 /**
  * Sends chat completion request to the configured OpenAI-compatible API endpoint.
  * @param {string} diff 
+ * @param {string} [detectedScope='']
  * @returns {Promise<string>}
  */
-export async function generateCommitMessage(diff) {
+export async function generateCommitMessage(diff, detectedScope = '') {
   const config = readConfig();
 
   if (!config.apiKey) {
@@ -47,11 +48,12 @@ export async function generateCommitMessage(diff) {
         model: config.model,
         messages: [
           { role: 'system', content: getSystemPrompt(config.convention) },
-          { role: 'user', content: createUserPrompt(diff, config.convention) }
+          { role: 'user', content: createUserPrompt(diff, detectedScope, config.convention) }
         ],
         temperature: 0.2
       })
     });
+
 
     if (!response.ok) {
       let errorBody = '';

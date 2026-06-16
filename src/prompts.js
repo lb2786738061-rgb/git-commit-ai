@@ -77,15 +77,21 @@ export function getSystemPrompt(convention = 'angular') {
 /**
  * Generates the user prompt payload containing the diff.
  * @param {string} diff 
+ * @param {string} [detectedScope='']
  * @param {string} [convention='angular'] 
  * @returns {string}
  */
-export function createUserPrompt(diff, convention = 'angular') {
-  return `Generate a git commit message for the following git diff output:
+export function createUserPrompt(diff, detectedScope = '', convention = 'angular') {
+  let prompt = `Generate a git commit message for the following git diff output:
 
 \`\`\`diff
 ${diff}
 \`\`\`
 `;
+  if (detectedScope) {
+    prompt += `\nRecommended commit scope to use: "${detectedScope}" (please prioritize using this scope inside parentheses, e.g. feat(${detectedScope}): your message)\n`;
+  }
+  return prompt;
 }
+
 
