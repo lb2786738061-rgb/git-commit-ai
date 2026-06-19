@@ -35,6 +35,7 @@ program
       console.log(`  ${pc.bold('API Base:')}    ${pc.blue(config.apiBase)}`);
       console.log(`  ${pc.bold('Model:')}       ${pc.blue(config.model)}`);
       console.log(`  ${pc.bold('Convention:')}  ${pc.blue(config.convention)}`);
+      console.log(`  ${pc.bold('Language:')}    ${pc.blue(config.language || 'en')}`);
       console.log();
       return;
     }
@@ -48,7 +49,7 @@ program
       const key = parts[0].trim();
       const value = parts.slice(1).join('=').trim();
 
-      const validKeys = ['apiKey', 'apiBase', 'model', 'convention'];
+      const validKeys = ['apiKey', 'apiBase', 'model', 'convention', 'language'];
       if (!validKeys.includes(key)) {
         console.log(pc.red(`❌ Invalid configuration key: "${key}". Valid keys: ${validKeys.join(', ')}`));
         return;
@@ -59,6 +60,15 @@ program
         const validConventions = ['angular', 'gitmoji'];
         if (!validConventions.includes(value)) {
           console.log(pc.red(`❌ 无效的提交规范样式: "${value}"。可选的规范包括: ${validConventions.join(', ')}`));
+          return;
+        }
+      }
+
+      // 验证语言配置项的值是否合法
+      if (key === 'language') {
+        const validLanguages = ['zh', 'en', 'ja', 'chinese', 'english', 'japanese', 'zh-cn'];
+        if (!validLanguages.includes(value.toLowerCase())) {
+          console.log(pc.red(`❌ 无效的语言配置: "${value}"。推荐的配置包括: zh (中文), en (英文), ja (日文)`));
           return;
         }
       }
@@ -141,11 +151,27 @@ program
             { title: 'gitmoji 规范 (例如: ✨ feat: 添加新功能)', value: 'gitmoji' }
           ],
           initial: currentConfig.convention === 'gitmoji' ? 1 : 0
+        },
+        {
+          type: 'select',
+          name: 'language',
+          message: '选择提交信息语言 (Language for commit message)：',
+          choices: [
+            { title: 'English (英文)', value: 'en' },
+            { title: 'Simplified Chinese (简体中文)', value: 'zh' },
+            { title: 'Japanese (日文)', value: 'ja' }
+          ],
+          initial: (() => {
+            const lang = currentConfig.language || 'en';
+            if (lang === 'zh' || lang === 'zh-cn' || lang === 'chinese') return 1;
+            if (lang === 'ja' || lang === 'japanese') return 2;
+            return 0;
+          })()
         }
       ]);
 
       // 处理用户取消输入的情况
-      if (response.apiKey === undefined || response.apiBase === undefined || response.modelSelect === undefined || response.convention === undefined) {
+      if (response.apiKey === undefined || response.apiBase === undefined || response.modelSelect === undefined || response.convention === undefined || response.language === undefined) {
         console.log(pc.yellow('\n配置向导已取消。'));
         return;
       }
@@ -156,7 +182,8 @@ program
         apiKey: response.apiKey.trim(),
         apiBase: response.apiBase.trim(),
         model: finalModel.trim(),
-        convention: response.convention
+        convention: response.convention,
+        language: response.language
       });
 
       console.log(pc.green('\n✓ 配置文件初始化成功！'));
@@ -167,6 +194,7 @@ program
       console.log(`  ${pc.bold('接口地址:')}    ${pc.blue(config.apiBase)}`);
       console.log(`  ${pc.bold('模型名称:')}    ${pc.blue(config.model)}`);
       console.log(`  ${pc.bold('提交规范:')}    ${pc.blue(config.convention)}`);
+      console.log(`  ${pc.bold('提交语言:')}    ${pc.blue(config.language || 'en')}`);
       console.log();
       console.log(pc.cyan('现在您可以开始提交代码了。运行 gca 体验自动生成提交信息功能！\n'));
     } catch (err) {

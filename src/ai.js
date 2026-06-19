@@ -47,7 +47,7 @@ export async function generateCommitMessage(diff, detectedScope = '') {
       body: JSON.stringify({
         model: config.model,
         messages: [
-          { role: 'system', content: getSystemPrompt(config.convention) },
+          { role: 'system', content: getSystemPrompt(config.convention, config.language) },
           { role: 'user', content: createUserPrompt(diff, detectedScope, config.convention) }
         ],
         temperature: 0.2

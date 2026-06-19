@@ -13,6 +13,7 @@ try {
   assert.ok(config.model.length > 0, 'model name should not be empty');
   assert.ok(typeof config.convention === 'string', '规范配置项必须为字符串');
   assert.ok(['angular', 'gitmoji'].includes(config.convention), '规范配置项的值不合法');
+  assert.ok(typeof config.language === 'string', '语言配置项必须为字符串');
   
   console.log('✅ All config tests passed successfully!');
 } catch (error) {

@@ -65,13 +65,32 @@ Rules:
 /**
  * 根据配置获取对应的系统提示词
  * @param {string} [convention='angular'] 规范类型
+ * @param {string} [language='en'] 提交信息主体的语言
  * @returns {string} 系统提示词内容
  */
-export function getSystemPrompt(convention = 'angular') {
-  if (convention === 'gitmoji') {
-    return SYSTEM_PROMPT_GITMOJI;
+export function getSystemPrompt(convention = 'angular', language = 'en') {
+  let prompt = convention === 'gitmoji' ? SYSTEM_PROMPT_GITMOJI : SYSTEM_PROMPT;
+  
+  const langMap = {
+    'en': 'English',
+    'english': 'English',
+    'zh': 'Chinese',
+    'cn': 'Chinese',
+    'zh-cn': 'Simplified Chinese',
+    'chinese': 'Chinese',
+    'ja': 'Japanese',
+    'jp': 'Japanese',
+    'japanese': 'Japanese'
+  };
+
+  const lowerLang = language.toLowerCase();
+  const langName = langMap[lowerLang] || language;
+
+  if (lowerLang !== 'en' && lowerLang !== 'english') {
+    prompt += `\n\n7. CRITICAL: The commit message <subject> and [body] MUST be written in ${langName}. Do NOT translate the commit <type> (e.g., feat, fix, refactor, docs must remain in English). Ignore English grammar rules like lowercase or imperative present tense for the <subject>, and write using natural phrasing in ${langName}.`;
   }
-  return SYSTEM_PROMPT;
+
+  return prompt;
 }
 
 /**

@@ -8,12 +8,13 @@ const DEFAULT_CONFIG = {
   apiKey: '',
   apiBase: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
-  convention: 'angular'
+  convention: 'angular',
+  language: 'en'
 };
 
 /**
  * Reads global configuration, merging environment variables, configuration file, and defaults.
- * @returns {{apiKey: string, apiBase: string, model: string, convention: string}}
+ * @returns {{apiKey: string, apiBase: string, model: string, convention: string, language: string}}
  */
 export function readConfig() {
   let fileConfig = {};
@@ -29,7 +30,8 @@ export function readConfig() {
     apiKey: process.env.OPENAI_API_KEY || fileConfig.apiKey || DEFAULT_CONFIG.apiKey,
     apiBase: process.env.OPENAI_API_BASE || fileConfig.apiBase || DEFAULT_CONFIG.apiBase,
     model: process.env.OPENAI_MODEL || fileConfig.model || DEFAULT_CONFIG.model,
-    convention: process.env.COMMIT_CONVENTION || fileConfig.convention || DEFAULT_CONFIG.convention
+    convention: process.env.COMMIT_CONVENTION || fileConfig.convention || DEFAULT_CONFIG.convention,
+    language: process.env.COMMIT_LANGUAGE || fileConfig.language || DEFAULT_CONFIG.language
   };
 }
 
