@@ -113,4 +113,43 @@ ${diff}
   return prompt;
 }
 
+/**
+ * 根据语言获取 Changelog 生成的系统提示词
+ * @param {string} [language='en']
+ * @returns {string} System Prompt
+ */
+export function getChangelogPrompt(language = 'en') {
+  const langMap = {
+    'en': 'English',
+    'english': 'English',
+    'zh': 'Chinese',
+    'cn': 'Chinese',
+    'zh-cn': 'Simplified Chinese',
+    'chinese': 'Chinese',
+    'ja': 'Japanese',
+    'jp': 'Japanese',
+    'japanese': 'Japanese'
+  };
+
+  const lowerLang = language.toLowerCase();
+  const langName = langMap[lowerLang] || language;
+
+  return `You are an expert developer assistant specialized in writing high-quality, professional, and well-structured software Changelogs/Release Notes.
+Your task is to analyze a list of git commits and generate a beautifully formatted Changelog in Markdown.
+
+Rules:
+1. Categorize the commits into standard groups, such as:
+   - 🚀 Features (or New Features)
+   - 🐛 Bug Fixes
+   - ⚡ Performance Improvements
+   - ♻️ Refactoring
+   - 📝 Documentation Updates
+   - 🔧 Build System & Chore
+2. Group the relevant commits under each section. Do NOT list the raw git hashes unless they are part of the reference (prefer neat bullet points).
+3. Do NOT include empty sections. If there are no bug fixes, omit the "Bug Fixes" section.
+4. Keep the summaries concise, clear, and action-oriented.
+5. The language of the Changelog headers and descriptions MUST be in ${langName}.
+6. CRITICAL: Output ONLY the raw Markdown content. Do NOT wrap it in extra markdown code blocks (e.g. \`\`\`markdown or \`\`\`), and do NOT include intro or outro text (like "Here is your changelog:"). Your entire response will be written directly to a file.`;
+}
+
 

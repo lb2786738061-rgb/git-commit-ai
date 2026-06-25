@@ -1,5 +1,5 @@
 import { readConfig } from './config.js';
-import { getSystemPrompt, createUserPrompt } from './prompts.js';
+import { getSystemPrompt, createUserPrompt, getChangelogPrompt } from './prompts.js';
 
 /**
  * Clean LLM response content, stripping accidental markdown code block wrappers.
@@ -54,6 +54,63 @@ export async function generateCommitMessage(diff, detectedScope = '') {
       })
     });
 
+
+    if (!response.ok) {
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+      } catch (_) {}
+      throw new Error(`HTTP ${response.status}: ${errorBody || response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+      throw new Error('Invalid response structure received from the API.');
+    }
+
+    return cleanResponse(data.choices[0].message.content);
+  } catch (error) {
+    throw new Error(`API communication failed: ${error.message}`);
+  }
+}
+
+/**
+ * 根据提交历史生成 Markdown 格式的更新日志 (Changelog)。
+ * @param {string[]} commits 
+ * @returns {Promise<string>}
+ */
+export async function generateChangelog(commits) {
+  const config = readConfig();
+
+  if (!config.apiKey) {
+    throw new Error('API Key is missing. Please set your API key by running:\n  git-commit-ai config --set apiKey=YOUR_KEY\n\nAlternatively, you can set the OPENAI_API_KEY environment variable.');
+  }
+
+  // Normalise ending slash of apiBase
+  let apiBase = config.apiBase.trim();
+  if (apiBase.endsWith('/')) {
+    apiBase = apiBase.slice(0, -1);
+  }
+  const url = `${apiBase}/chat/completions`;
+
+  const commitsText = commits.join('\n');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [
+          { role: 'system', content: getChangelogPrompt(config.language) },
+          { role: 'user', content: `Analyze the following commits and generate a release changelog:\n\n${commitsText}` }
+        ],
+        temperature: 0.3
+      })
+    });
 
     if (!response.ok) {
       let errorBody = '';

@@ -182,3 +182,43 @@ export function detectScope(files) {
   return dominantScope;
 }
 
+/**
+ * 获取指定范围内的 Git 提交记录历史。
+ * @param {string} [from] 起始 tag 或 commit
+ * @param {string} [to] 结束 tag 或 commit
+ * @returns {string[]}
+ */
+export function getCommitHistory(from, to) {
+  try {
+    const range = from && to ? `${from}..${to}` : from ? `${from}..HEAD` : '';
+    const args = ['log'];
+    if (range) {
+      args.push(range);
+    } else {
+      // 默认抓取最近 20 条提交
+      args.push('-n', '20');
+    }
+    // 获取简短的哈希和提交主题
+    args.push('--pretty=format:%h %s');
+    
+    const output = execFileSync('git', args, { stdio: 'pipe' }).toString().trim();
+    return output ? output.split(/\r?\n/) : [];
+  } catch (error) {
+    const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
+    throw new Error(errMsg || '获取 Git 提交记录失败。');
+  }
+}
+
+/**
+ * 获取本地所有 tags 列表，按创建时间倒序排列。
+ * @returns {string[]}
+ */
+export function getLatestTags() {
+  try {
+    const output = execFileSync('git', ['tag', '--sort=-creatordate'], { stdio: 'pipe' }).toString().trim();
+    return output ? output.split(/\r?\n/) : [];
+  } catch (error) {
+    return [];
+  }
+}
+

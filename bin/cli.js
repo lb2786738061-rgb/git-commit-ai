@@ -8,8 +8,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readConfig, writeConfig, getConfigFilePath } from '../src/config.js';
-import { isGitRepository, getStagedDiff, getStagedFiles, getUnstagedFiles, commitChanges, pushChanges, detectScope } from '../src/git.js';
-import { generateCommitMessage } from '../src/ai.js';
+import { isGitRepository, getStagedDiff, getStagedFiles, getUnstagedFiles, commitChanges, pushChanges, detectScope, getCommitHistory, getLatestTags } from '../src/git.js';
+import { generateCommitMessage, generateChangelog } from '../src/ai.js';
+import { verifyCommitMessage } from '../src/verify.js';
 
 const program = new Command();
 
@@ -207,12 +208,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CLI_PATH = path.resolve(__dirname, 'cli.js');
 
-// Git pre-commit 钩子管理命令
+// Git 钩子管理命令
 program
   .command('hook')
-  .description('管理 Git pre-commit 钩子')
-  .option('-i, --install', '安装 Git pre-commit 钩子，使得在执行 git commit 时自动触发交互')
-  .option('-u, --uninstall', '卸载 Git pre-commit 钩子')
+  .description('管理 Git 本地钩子（包含交互式提交流程及提交规范校验）')
+  .option('-i, --install', '安装 Git 钩子 (包括 pre-commit 交互钩子与 commit-msg 校验钩子)')
+  .option('-u, --uninstall', '卸载 Git 钩子')
   .action((options) => {
     if (!isGitRepository()) {
       console.error(pc.red('❌ 错误: 当前目录不是一个 Git 仓库。'));
@@ -221,7 +222,8 @@ program
 
     const gitDir = path.join(process.cwd(), '.git');
     const hooksDir = path.join(gitDir, 'hooks');
-    const hookPath = path.join(hooksDir, 'pre-commit');
+    const preCommitPath = path.join(hooksDir, 'pre-commit');
+    const commitMsgPath = path.join(hooksDir, 'commit-msg');
 
     if (options.install) {
       if (!fs.existsSync(hooksDir)) {
@@ -230,7 +232,9 @@ program
 
       // 将 Windows 路径中的反斜杠转换为正斜杠，保证在 Git Bash 环境中可正常执行
       const normalizedCliPath = CLI_PATH.replace(/\\/g, '/');
-      const hookContent = `#!/bin/sh
+
+      // 1. 安装 pre-commit 钩子
+      const preCommitContent = `#!/bin/sh
 # git-commit-ai pre-commit hook start
 if [ "$GCA_BYPASS_HOOK" = "1" ]; then
   exit 0
@@ -246,58 +250,210 @@ exit 1
 # git-commit-ai pre-commit hook end
 `;
 
-      let existingContent = '';
-      if (fs.existsSync(hookPath)) {
-        existingContent = fs.readFileSync(hookPath, 'utf-8');
+      let existingPreCommit = '';
+      if (fs.existsSync(preCommitPath)) {
+        existingPreCommit = fs.readFileSync(preCommitPath, 'utf-8');
       }
 
-      if (existingContent.includes('git-commit-ai pre-commit hook start')) {
-        console.log(pc.yellow('⚠️  Pre-commit 钩子已安装。'));
-        return;
+      if (!existingPreCommit.includes('git-commit-ai pre-commit hook start')) {
+        const newPreCommit = existingPreCommit
+          ? `${existingPreCommit}\n${preCommitContent}`
+          : preCommitContent;
+        fs.writeFileSync(preCommitPath, newPreCommit, { mode: 0o755 });
+        try {
+          fs.chmodSync(preCommitPath, '755');
+        } catch (_) {}
+        console.log(pc.green('✓ Git pre-commit 交互钩子安装成功！'));
+      } else {
+        console.log(pc.yellow('⚠️  Pre-commit 交互钩子已安装。'));
       }
 
-      const newContent = existingContent
-        ? `${existingContent}\n${hookContent}`
-        : hookContent;
+      // 2. 安装 commit-msg 校验钩子
+      const commitMsgContent = `#!/bin/sh
+# git-commit-ai commit-msg hook start
+if [ "$GCA_BYPASS_HOOK" = "1" ]; then
+  exit 0
+fi
 
-      fs.writeFileSync(hookPath, newContent, { mode: 0o755 });
-      try {
-        fs.chmodSync(hookPath, '755');
-      } catch (_) {}
+node "${normalizedCliPath}" verify-commit "$1"
+# git-commit-ai commit-msg hook end
+`;
 
-      console.log(pc.green('✓ Git pre-commit 钩子安装成功！'));
-      console.log(pc.dim('现在，您直接运行标准的 "git commit" 就会自动触发交互式 AI 提交流程。'));
+      let existingCommitMsg = '';
+      if (fs.existsSync(commitMsgPath)) {
+        existingCommitMsg = fs.readFileSync(commitMsgPath, 'utf-8');
+      }
+
+      if (!existingCommitMsg.includes('git-commit-ai commit-msg hook start')) {
+        const newCommitMsg = existingCommitMsg
+          ? `${existingCommitMsg}\n${commitMsgContent}`
+          : commitMsgContent;
+        fs.writeFileSync(commitMsgPath, newCommitMsg, { mode: 0o755 });
+        try {
+          fs.chmodSync(commitMsgPath, '755');
+        } catch (_) {}
+        console.log(pc.green('✓ Git commit-msg 规范校验钩子安装成功！'));
+      } else {
+        console.log(pc.yellow('⚠️  Commit-msg 规范校验钩子已安装。'));
+      }
+
+      console.log(pc.dim('\n提示: 直接运行标准的 "git commit" 即可触发交互式提交流程。手动提交时将自动触发规范校验。'));
       return;
     }
 
     if (options.uninstall) {
-      if (!fs.existsSync(hookPath)) {
-        console.log(pc.yellow('⚠️  未找到任何 pre-commit 钩子文件。'));
-        return;
+      let uninstalled = false;
+
+      // 1. 卸载 pre-commit 钩子
+      if (fs.existsSync(preCommitPath)) {
+        const content = fs.readFileSync(preCommitPath, 'utf-8');
+        if (content.includes('git-commit-ai pre-commit hook start')) {
+          const cleaned = content.replace(
+            /\n?# git-commit-ai pre-commit hook start[\s\S]*?# git-commit-ai pre-commit hook end\n?/,
+            ''
+          );
+          if (cleaned.trim() === '' || cleaned.trim() === '#!/bin/sh') {
+            fs.unlinkSync(preCommitPath);
+          } else {
+            fs.writeFileSync(preCommitPath, cleaned, { mode: 0o755 });
+          }
+          console.log(pc.green('✓ Git pre-commit 交互钩子卸载成功。'));
+          uninstalled = true;
+        }
       }
 
-      const content = fs.readFileSync(hookPath, 'utf-8');
-      if (!content.includes('git-commit-ai pre-commit hook start')) {
-        console.log(pc.yellow('⚠️  未在 pre-commit 钩子文件中找到 git-commit-ai 的相关配置。'));
-        return;
+      // 2. 卸载 commit-msg 钩子
+      if (fs.existsSync(commitMsgPath)) {
+        const content = fs.readFileSync(commitMsgPath, 'utf-8');
+        if (content.includes('git-commit-ai commit-msg hook start')) {
+          const cleaned = content.replace(
+            /\n?# git-commit-ai commit-msg hook start[\s\S]*?# git-commit-ai commit-msg hook end\n?/,
+            ''
+          );
+          if (cleaned.trim() === '' || cleaned.trim() === '#!/bin/sh') {
+            fs.unlinkSync(commitMsgPath);
+          } else {
+            fs.writeFileSync(commitMsgPath, cleaned, { mode: 0o755 });
+          }
+          console.log(pc.green('✓ Git commit-msg 规范校验钩子卸载成功。'));
+          uninstalled = true;
+        }
       }
 
-      const cleanedContent = content.replace(
-        /\n?# git-commit-ai pre-commit hook start[\s\S]*?# git-commit-ai pre-commit hook end\n?/,
-        ''
-      );
-
-      if (cleanedContent.trim() === '' || cleanedContent.trim() === '#!/bin/sh') {
-        fs.unlinkSync(hookPath);
-      } else {
-        fs.writeFileSync(hookPath, cleanedContent, { mode: 0o755 });
+      if (!uninstalled) {
+        console.log(pc.yellow('⚠️  未检测到任何由 git-commit-ai 安装的本地钩子。'));
       }
-
-      console.log(pc.green('✓ Git pre-commit 钩子卸载成功。'));
       return;
     }
 
-    console.log(pc.dim('请使用 "git-commit-ai hook --install" 安装钩子，或 "git-commit-ai hook --uninstall" 卸载钩子。'));
+    console.log(pc.dim('请使用 "git-commit-ai hook --install" 安装本地钩子，或 "git-commit-ai hook --uninstall" 卸载。'));
+  });
+
+// 提交消息合规性校验命令
+program
+  .command('verify-commit <msgPath>')
+  .description('校验提交消息是否符合规范（供 commit-msg 钩子使用）')
+  .action((msgPath) => {
+    if (!fs.existsSync(msgPath)) {
+      console.error(pc.red(`❌ 错误: 找不到提交消息临时文件 "${msgPath}"。`));
+      process.exit(1);
+    }
+
+    const message = fs.readFileSync(msgPath, 'utf-8');
+    const config = readConfig();
+
+    const result = verifyCommitMessage(message, config.convention);
+
+    if (!result.valid) {
+      console.error(pc.red('\n❌ Git 提交信息格式不合规，已被拒绝入库。'));
+      console.error(pc.yellow(`原因: ${result.reason}\n`));
+      
+      console.error(pc.dim('Conventional Commits 规范格式说明:'));
+      console.error(pc.dim('  feat(scope): 描述新功能'));
+      console.error(pc.dim('  fix(scope): 修复问题'));
+      console.error(pc.dim('  docs: 更新文档'));
+      console.error(pc.dim('  style: 格式化/样式调整（不影响代码运行逻辑）'));
+      console.error(pc.dim('  refactor: 代码重构'));
+      console.error(pc.dim('  perf: 性能优化'));
+      console.log(pc.cyan('\n💡 推荐使用 "gca" 命令，由 AI 自动生成完美合规的提交信息。\n'));
+      process.exit(1);
+    }
+
+    // 校验成功
+    process.exit(0);
+  });
+
+// Changelog 自动生成命令
+program
+  .command('changelog')
+  .description('基于 Git 提交历史自动生成 AI 更新日志')
+  .option('-f, --from <tag/commit>', '起始的 tag 或 commit hash')
+  .option('-t, --to <tag/commit>', '结束的 tag 或 commit hash (默认为 HEAD)')
+  .option('-o, --output <file>', '输出的文件路径 (例如 CHANGELOG.md)')
+  .action(async (options) => {
+    if (!isGitRepository()) {
+      console.error(pc.red('❌ 错误: 当前目录不是一个 Git 仓库。'));
+      process.exit(1);
+    }
+
+    let from = options.from;
+    let to = options.to;
+
+    // 智能推断范围
+    if (!from) {
+      const tags = getLatestTags();
+      if (tags.length >= 2) {
+        // 如果有两个或以上的 tag，默认生成最新两个 tag 之间的更新日志
+        from = tags[1];
+        to = to || tags[0];
+        console.log(pc.cyan(`💡 未指定范围，自动选取最近两个 Tag 之间的提交进行分析: ${pc.bold(from)}..${pc.bold(to)}`));
+      } else if (tags.length === 1) {
+        // 如果只有一个 tag，默认生成 tag 到 HEAD 的更新日志
+        from = tags[0];
+        console.log(pc.cyan(`💡 未指定范围，自动选取 Tag ${pc.bold(from)} 到 HEAD 之间的提交进行分析`));
+      } else {
+        console.log(pc.cyan('💡 仓库未检测到任何 Tag，将分析最近 20 条提交记录...'));
+      }
+    }
+
+    const spinner = ora({
+      text: pc.cyan('正在分析提交历史并由 AI 生成更新日志...'),
+      color: 'cyan'
+    }).start();
+
+    try {
+      const commits = getCommitHistory(from, to);
+      if (commits.length === 0) {
+        spinner.fail(pc.red('未找到任何提交记录。'));
+        process.exit(1);
+      }
+
+      spinner.text = pc.cyan(`已获取到 ${commits.length} 条提交记录，正在向 AI 请求生成更新日志...`);
+      const changelog = await generateChangelog(commits);
+      spinner.succeed(pc.green('更新日志生成成功！'));
+
+      if (options.output) {
+        const outputPath = path.resolve(process.cwd(), options.output);
+        
+        let fileContent = changelog;
+        // 如果文件已存在，则将新日志追加在最前面
+        if (fs.existsSync(outputPath)) {
+          const originalContent = fs.readFileSync(outputPath, 'utf-8');
+          fileContent = `${changelog}\n\n---\n\n${originalContent}`;
+        }
+        
+        fs.writeFileSync(outputPath, fileContent, 'utf-8');
+        console.log(pc.green(`✓ 更新日志已成功保存/追加至: ${pc.bold(outputPath)}`));
+      } else {
+        console.log(pc.cyan('\n──────────────────────────────────────────────────────────────────────'));
+        console.log(pc.white(changelog));
+        console.log(pc.cyan('──────────────────────────────────────────────────────────────────────\n'));
+      }
+    } catch (error) {
+      spinner.fail(pc.red('生成更新日志失败。'));
+      console.error(`\n${pc.bold('错误详情:')} ${pc.red(error.message)}\n`);
+      process.exit(1);
+    }
   });
 
 // 主 CLI 逻辑
