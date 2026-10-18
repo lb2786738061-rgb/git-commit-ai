@@ -1,0 +1,25 @@
+{
+  "name": "codesync-cli",
+  "version": "2.0.0",
+  "description": "CodeSync CLI - 简化Git操作 + AI代码助手",
+  "type": "module",
+  "bin": {
+    "codesync": "./bin/codesync.js"
+  },
+  "scripts": {
+    "start": "node bin/codesync.js"
+  },
+  "keywords": [
+    "git",
+    "cli",
+    "ai",
+    "code",
+    "upload",
+    "download"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0"
+  }
+}
