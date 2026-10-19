@@ -3,12 +3,14 @@ import { generateCommitMessage } from '../../../shared/ai/commit.js';
 import fs from 'fs';
 import path from 'path';
 import { GitOperations } from '../../../shared/git/operations.js';
+import pc from 'picocolors';
+import ora from 'ora';
 
 export async function aiCommand(action, options) {
   const { file, language } = options;
 
-  console.log('🤖 CodeSync - AI助手');
-  console.log('─'.repeat(50));
+  console.log(pc.cyan(pc.bold('\n🤖 CodeSync - AI 助手')));
+  console.log(pc.dim('─'.repeat(50)));
 
   try {
     switch (action) {
@@ -25,20 +27,20 @@ export async function aiCommand(action, options) {
         await handleReview(file, language);
         break;
       default:
-        console.error('❌ 未知的操作类型');
-        console.log('可用操作: commit, annotate, explain, review');
+        console.error(pc.red('❌ 未知的操作类型'));
+        console.log(pc.dim('可用操作: commit, annotate, explain, review'));
         process.exit(1);
     }
   } catch (error) {
-    console.error('❌ 操作失败:', error.message);
+    console.error(pc.red(`\n❌ 操作失败: ${error.message}`));
+    if (error.message.includes('API Key')) {
+      console.error(pc.dim('\n💡 提示: 请先配置 API Key: codesync config --set apiKey=YOUR_KEY\n'));
+    }
     process.exit(1);
   }
 }
 
 async function handleCommit() {
-  console.log('生成提交信息...');
-  console.log('─'.repeat(50));
-
   const git = new GitOperations(process.cwd());
 
   if (!GitOperations.isGitRepository(process.cwd())) {
@@ -47,18 +49,60 @@ async function handleCommit() {
 
   const diff = await git.getStagedDiff();
   if (!diff || diff.trim() === '') {
-    console.log('⚠️  没有暂存的更改');
-    console.log('请先运行: git add <files>');
+    console.log(pc.yellow('⚠️  没有暂存的更改'));
+    console.log(pc.dim('请先运行: git add <files>'));
     return;
   }
 
+  const spinner = ora(pc.cyan('正在生成提交信息...')).start();
   const message = await generateCommitMessage(diff, '');
+  spinner.succeed(pc.green('提交信息生成成功'));
 
-  console.log('─'.repeat(50));
-  console.log('✅ 生成的提交信息:');
-  console.log('─'.repeat(50));
-  console.log(message);
-  console.log('─'.repeat(50));
+  console.log(pc.cyan('\n──────────────────────────────────────────────────────────────────────'));
+  console.log(pc.bold(pc.white(message)));
+  console.log(pc.cyan('──────────────────────────────────────────────────────────────────────\n'));
+
+  const { default: prompts } = await import('prompts');
+  const response = await prompts({
+    type: 'select',
+    name: 'action',
+    message: '选择操作:',
+    choices: [
+      { title: pc.green('确认并提交'), value: 'commit' },
+      { title: pc.yellow('编辑提交信息'), value: 'edit' },
+      { title: pc.red('取消'), value: 'cancel' }
+    ]
+  });
+
+  if (response.action === 'commit') {
+    const commitSpinner = ora(pc.cyan('正在提交...')).start();
+    try {
+      await git.commit(message);
+      commitSpinner.succeed(pc.green('提交成功！'));
+    } catch (err) {
+      commitSpinner.fail(pc.red('提交失败'));
+      throw err;
+    }
+  } else if (response.action === 'edit') {
+    const editResponse = await prompts({
+      type: 'text',
+      name: 'message',
+      message: '编辑提交信息:',
+      initial: message
+    });
+    if (editResponse.message) {
+      const commitSpinner = ora(pc.cyan('正在提交...')).start();
+      try {
+        await git.commit(editResponse.message);
+        commitSpinner.succeed(pc.green('提交成功！'));
+      } catch (err) {
+        commitSpinner.fail(pc.red('提交失败'));
+        throw err;
+      }
+    }
+  } else {
+    console.log(pc.yellow('\n操作已取消。'));
+  }
 }
 
 async function handleAnnotate(filePath, language) {
@@ -66,21 +110,22 @@ async function handleAnnotate(filePath, language) {
     throw new Error('请指定文件路径: -f <file>');
   }
 
-  console.log(`为文件生成注释: ${filePath}`);
-  console.log('─'.repeat(50));
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error('文件不存在');
+  const resolvedPath = path.resolve(filePath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`文件不存在: ${resolvedPath}`);
   }
 
-  const code = fs.readFileSync(filePath, 'utf-8');
-  const annotatedCode = await generateAnnotation(code, language || 'javascript');
+  console.log(`  ${pc.bold('文件:')} ${resolvedPath}`);
+  console.log(`  ${pc.bold('语言:')} ${language || '自动检测'}`);
 
-  console.log('─'.repeat(50));
-  console.log('✅ 带注释的代码:');
-  console.log('─'.repeat(50));
-  console.log(annotatedCode);
-  console.log('─'.repeat(50));
+  const code = fs.readFileSync(resolvedPath, 'utf-8');
+  const spinner = ora(pc.cyan('正在生成代码注释...')).start();
+  const annotatedCode = await generateAnnotation(code, language || 'javascript');
+  spinner.succeed(pc.green('注释生成成功'));
+
+  console.log(pc.cyan('\n──────────────────────────────────────────────────────────────────────'));
+  console.log(pc.white(annotatedCode));
+  console.log(pc.cyan('──────────────────────────────────────────────────────────────────────\n'));
 }
 
 async function handleExplain(filePath, language) {
@@ -88,21 +133,22 @@ async function handleExplain(filePath, language) {
     throw new Error('请指定文件路径: -f <file>');
   }
 
-  console.log(`解释代码: ${filePath}`);
-  console.log('─'.repeat(50));
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error('文件不存在');
+  const resolvedPath = path.resolve(filePath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`文件不存在: ${resolvedPath}`);
   }
 
-  const code = fs.readFileSync(filePath, 'utf-8');
-  const explanation = await explainCode(code, language || 'javascript');
+  console.log(`  ${pc.bold('文件:')} ${resolvedPath}`);
+  console.log(`  ${pc.bold('语言:')} ${language || '自动检测'}`);
 
-  console.log('─'.repeat(50));
-  console.log('✅ 代码解释:');
-  console.log('─'.repeat(50));
-  console.log(explanation);
-  console.log('─'.repeat(50));
+  const code = fs.readFileSync(resolvedPath, 'utf-8');
+  const spinner = ora(pc.cyan('正在解释代码...')).start();
+  const explanation = await explainCode(code, language || 'javascript');
+  spinner.succeed(pc.green('代码解释生成成功'));
+
+  console.log(pc.cyan('\n──────────────────────────────────────────────────────────────────────'));
+  console.log(pc.white(explanation));
+  console.log(pc.cyan('──────────────────────────────────────────────────────────────────────\n'));
 }
 
 async function handleReview(filePath, language) {
@@ -110,19 +156,20 @@ async function handleReview(filePath, language) {
     throw new Error('请指定文件路径: -f <file>');
   }
 
-  console.log(`审查代码: ${filePath}`);
-  console.log('─'.repeat(50));
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error('文件不存在');
+  const resolvedPath = path.resolve(filePath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`文件不存在: ${resolvedPath}`);
   }
 
-  const code = fs.readFileSync(filePath, 'utf-8');
-  const review = await reviewCode(code, language || 'javascript');
+  console.log(`  ${pc.bold('文件:')} ${resolvedPath}`);
+  console.log(`  ${pc.bold('语言:')} ${language || '自动检测'}`);
 
-  console.log('─'.repeat(50));
-  console.log('✅ 代码审查报告:');
-  console.log('─'.repeat(50));
-  console.log(review);
-  console.log('─'.repeat(50));
+  const code = fs.readFileSync(resolvedPath, 'utf-8');
+  const spinner = ora(pc.cyan('正在审查代码...')).start();
+  const review = await reviewCode(code, language || 'javascript');
+  spinner.succeed(pc.green('代码审查完成'));
+
+  console.log(pc.cyan('\n──────────────────────────────────────────────────────────────────────'));
+  console.log(pc.white(review));
+  console.log(pc.cyan('──────────────────────────────────────────────────────────────────────\n'));
 }

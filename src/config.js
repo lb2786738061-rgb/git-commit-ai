@@ -9,7 +9,20 @@ const DEFAULT_CONFIG = {
   apiBase: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
   convention: 'angular',
-  language: 'en'
+  language: 'en',
+  // 智能模型选择配置
+  smartModel: true,
+  fastModel: 'gpt-4o-mini',
+  powerfulModel: 'gpt-4o',
+  complexityThreshold: 5000, // diff 字符数阈值
+  // 团队协作配置
+  teamConfigPath: '.git-commit-ai-team.json', // 团队配置文件路径
+  // 性能优化配置
+  enableCache: true,
+  cacheTTL: 3600000, // 缓存过期时间（毫秒，默认 1 小时）
+  // UI 配置
+  theme: 'default', // 主题: default, minimal, colorful
+  jsonOutput: false // JSON 输出模式（用于 CI 集成）
 };
 
 /**
@@ -55,4 +68,35 @@ export function writeConfig(newConfig) {
 
 export function getConfigFilePath() {
   return CONFIG_FILE;
+}
+
+/**
+ * 读取团队配置文件（位于项目根目录）
+ * @returns {object} 团队配置
+ */
+export function readTeamConfig() {
+  const cwd = process.cwd();
+  const teamConfigPath = path.join(cwd, '.git-commit-ai-team.json');
+
+  if (!fs.existsSync(teamConfigPath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(teamConfigPath, 'utf-8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 写入团队配置文件
+ * @param {object} config 团队配置
+ */
+export function writeTeamConfig(config) {
+  const cwd = process.cwd();
+  const teamConfigPath = path.join(cwd, '.git-commit-ai-team.json');
+
+  fs.writeFileSync(teamConfigPath, JSON.stringify(config, null, 2), 'utf-8');
+  return teamConfigPath;
 }

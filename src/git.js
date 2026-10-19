@@ -1,4 +1,4 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 
 /**
  * Checks if git is installed and if the current working directory is a git repository.
@@ -84,6 +84,114 @@ export function getUnstagedFiles() {
       .filter(Boolean);
   } catch (error) {
     return [];
+  }
+}
+
+/**
+ * 获取指定文件的 diff
+ * @param {string} filePath 文件路径
+ * @returns {string} diff 内容
+ */
+export function getFileDiff(filePath) {
+  try {
+    const excludeArgs = EXCLUDE_PATTERNS.map(pattern => `:(exclude)${pattern}`);
+    return execFileSync('git', ['diff', '--', filePath, ...excludeArgs], {
+      stdio: 'pipe',
+      maxBuffer: 15 * 1024 * 1024
+    }).toString();
+  } catch (error) {
+    throw new Error(`Failed to get diff for ${filePath}`);
+  }
+}
+
+/**
+ * 暂存指定文件
+ * @param {string} filePath 文件路径
+ */
+export function stageFile(filePath) {
+  try {
+    execFileSync('git', ['add', filePath], { stdio: 'pipe' });
+  } catch (error) {
+    throw new Error(`Failed to stage ${filePath}`);
+  }
+}
+
+/**
+ * 取消暂存指定文件
+ * @param {string} filePath 文件路径
+ */
+export function unstageFile(filePath) {
+  try {
+    execFileSync('git', ['reset', filePath], { stdio: 'pipe' });
+  } catch (error) {
+    throw new Error(`Failed to unstage ${filePath}`);
+  }
+}
+
+/**
+ * 修改最后一次提交
+ * @param {string} message 新的提交信息
+ * @returns {string} git 输出
+ */
+export function amendCommit(message) {
+  try {
+    const output = execFileSync('git', ['commit', '--amend', '-m', message], {
+      stdio: 'pipe',
+      env: { ...process.env, GCA_BYPASS_HOOK: '1' }
+    });
+    return output.toString();
+  } catch (error) {
+    const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
+    throw new Error(errMsg || 'Git amend failed.');
+  }
+}
+
+/**
+ * 合并最近的提交
+ * @param {number} count 要合并的提交数量
+ * @param {string} message 合并后的提交信息
+ * @returns {string} git 输出
+ */
+export function squashCommits(count, message) {
+  try {
+    // 使用 git reset --soft 回退，然后重新提交
+    execFileSync('git', ['reset', '--soft', `HEAD~${count}`], { stdio: 'pipe' });
+    const output = execFileSync('git', ['commit', '-m', message], {
+      stdio: 'pipe',
+      env: { ...process.env, GCA_BYPASS_HOOK: '1' }
+    });
+    return output.toString();
+  } catch (error) {
+    const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
+    throw new Error(errMsg || 'Git squash failed.');
+  }
+}
+
+/**
+ * 基于提交主题创建新分支
+ * @param {string} branchName 分支名称
+ * @returns {string} git 输出
+ */
+export function createBranch(branchName) {
+  try {
+    const output = execFileSync('git', ['checkout', '-b', branchName], { stdio: 'pipe' });
+    return output.toString();
+  } catch (error) {
+    const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
+    throw new Error(errMsg || 'Git branch creation failed.');
+  }
+}
+
+/**
+ * 获取当前分支名称
+ * @returns {string} 分支名称
+ */
+export function getCurrentBranch() {
+  try {
+    const output = execFileSync('git', ['branch', '--show-current'], { stdio: 'pipe' }).toString().trim();
+    return output;
+  } catch (error) {
+    throw new Error('Failed to get current branch.');
   }
 }
 
@@ -220,5 +328,108 @@ export function getLatestTags() {
   } catch (error) {
     return [];
   }
+}
+
+/**
+ * 获取详细的提交历史（包含完整信息和格式化）
+ * @param {string} [from] 起始 tag 或 commit
+ * @param {string} [to] 结束 tag 或 commit
+ * @param {number} [limit=50] 限制返回的提交数量
+ * @returns {Array<{hash: string, type: string, scope: string, subject: string, author: string, date: string}>}
+ */
+export function getDetailedCommitHistory(from, to, limit = 50) {
+  try {
+    const range = from && to ? `${from}..${to}` : from ? `${from}..HEAD` : '';
+    const args = ['log'];
+    if (range) {
+      args.push(range);
+    } else {
+      args.push('-n', limit.toString());
+    }
+    // 获取详细信息：hash, type, scope, subject, author, date
+    args.push('--pretty=format:%H|%s|%an|%ai');
+    
+    const output = execFileSync('git', args, { stdio: 'pipe' }).toString().trim();
+    if (!output) return [];
+
+    return output.split(/\r?\n/).map(line => {
+      const [hash, subject, author, date] = line.split('|');
+      // 解析提交类型和范围
+      const typeMatch = subject.match(/^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\(([^)]+)\))?/);
+      const type = typeMatch ? typeMatch[1] : 'other';
+      const scope = typeMatch ? (typeMatch[2] || '') : '';
+
+      return {
+        hash: hash.substring(0, 8),
+        type,
+        scope,
+        subject,
+        author,
+        date
+      };
+    });
+  } catch (error) {
+    const errMsg = error.stderr ? error.stderr.toString().trim() : error.message;
+    throw new Error(errMsg || '获取详细提交历史失败。');
+  }
+}
+
+/**
+ * 使用系统编辑器编辑文本内容
+ * @param {string} initialContent 初始内容
+ * @returns {Promise<string>} 编辑后的内容
+ */
+export function editWithEditor(initialContent) {
+  return new Promise((resolve, reject) => {
+    const editor = process.env.EDITOR || process.env.VISUAL || 'vim';
+    const os = require('os');
+    const path = require('path');
+    const fs = require('fs');
+    
+    // 创建临时文件
+    const tmpDir = os.tmpdir();
+    const tmpFile = path.join(tmpDir, `git-commit-ai-${Date.now()}.txt`);
+    
+    try {
+      fs.writeFileSync(tmpFile, initialContent, 'utf-8');
+    } catch (err) {
+      reject(new Error(`Failed to create temp file: ${err.message}`));
+      return;
+    }
+
+    // 启动编辑器
+    const editorArgs = editor.split(' ');
+    const editorCmd = editorArgs[0];
+    const editorParams = editorArgs.slice(1).concat(tmpFile);
+
+    const child = spawn(editorCmd, editorParams, {
+      stdio: 'inherit'
+    });
+
+    child.on('close', (code) => {
+      try {
+        const editedContent = fs.readFileSync(tmpFile, 'utf-8');
+        fs.unlinkSync(tmpFile);
+        
+        if (code !== 0) {
+          reject(new Error(`Editor exited with code ${code}`));
+          return;
+        }
+        
+        resolve(editedContent);
+      } catch (err) {
+        reject(new Error(`Failed to read edited content: ${err.message}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      try {
+        if (fs.existsSync(tmpFile)) {
+          fs.unlinkSync(tmpFile);
+        }
+      } catch (_) {}
+      reject(new Error(`Failed to launch editor: ${err.message}`));
+    });
+  });
 }
 

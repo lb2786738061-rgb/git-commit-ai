@@ -1,0 +1,36 @@
+{
+  "name": "codesync-desktop",
+  "version": "2.0.0",
+  "description": "CodeSync 桌面应用 - 简化Git操作 + AI代码助手",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder"
+  },
+  "keywords": ["git", "ai", "desktop", "electron"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^31.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.codesync.desktop",
+    "productName": "CodeSync",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

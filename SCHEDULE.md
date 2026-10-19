@@ -15,4 +15,22 @@
 - **[已更新] 6月20日 - 6月22日**：设计并开发 AI 自动生成更新日志（Changelog）功能，支持分析两个版本标签之间的提交历史。
 - **[已更新] 6月23日 - 6月25日**：编写提交消息合规性校验脚本，提供本地钩子校验，防止不合规的提交信息入库。
 - **[已更新] 6月26日 - 6月28日**：编写自动化测试脚本，全面覆盖配置向导、差异过滤、多语言和规范切换等核心流程。
-- **[未开始] 6月29日 - 6月30日**：项目整体代码重构与文档完善，整理使用手册，发布正式的 v1.1.0 稳定版本。
+- **[已更新] 6月29日 - 6月30日**：项目整体代码重构与文档完善，整理使用手册，发布正式的 v1.1.0 稳定版本。
+
+---
+
+## 📅 10月份补充开发
+
+- **[已更新] 10月18日**：完成所有未完成功能：
+  - 🔴 P0：创建 GitLab 平台适配（shared/platform/gitlab.js）
+  - 🟡 P1：统一配置文件名（.git-commit-ai.json / .git-commit-ai-team.json）
+  - 🟡 P1：修复 readConfig() 返回全部配置项
+  - 🟡 P1：CLI 子包增强（picocolors/ora/prompts 交互式选择/颜色/进度/错误处理）
+  - 🟡 P1：CLI 新增命令（init/changelog/analyze/batch）
+  - 🟡 P1：桌面应用前端 app.js（7 个页面渲染器）
+  - 🟡 P1：桌面应用 preload.js 完整 API 暴露
+  - 🟡 P1：桌面应用 main.js 完整 IPC 处理器
+  - 🟢 P2：shared/git/operations.js 添加 diff 过滤逻辑
+  - 🟢 P2：修复 ESM require() → import
+  - 🟢 P3：新增 4 个测试文件（shared-config/shared-git-operations/shared-platform/desktop-app）
+  - 🟢 P3：根 package.json 添加 "type": "module"

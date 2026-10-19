@@ -4,48 +4,114 @@ This document outlines the planned evolutionary phases and feature updates for `
 
 ---
 
-## 📌 Phase 1: Core Foundation & Stability (Current Status)
+## 📌 Phase 1: Core Foundation & Stability ✅ COMPLETED
+
 Focus on building a reliable, zero-dependency, and high-performance interactive CLI tool.
 
 - [x] **Native ESM Implementation**: Built entirely on Node.js native ES Modules for cross-platform compatibility and minimal footprint.
-- [x] **Secure Configuration Storage**: Implemented localized settings storage (~/.git-commit-ai.json) separated from Git repository workspaces.
+- [x] **Secure Configuration Storage**: Implemented localized settings storage (`~/.git-commit-ai.json`) separated from Git repository workspaces.
 - [x] **OpenAI Compatible Client**: Supporting all OpenAI-compatible API endpoints (OpenAI, DeepSeek, Groq, Ollama, etc.) with custom model parameters.
 - [x] **Interactive CLI UX**: Implemented spinners (`ora`), colors (`picocolors`), and action selector menus (`prompts`).
 - [x] **Standard Conventional Commits**: Out-of-the-box formatting conforming to Angular commit message specifications.
 - [x] **Staged Diff Guards**: Intelligent handling of empty staged states and size boundaries.
+- [x] **Lockfile & Asset Filtering**: Smart filter removes `package-lock.json`, `pnpm-lock.yaml`, binaries, and SVGs from diff, reducing token consumption by up to **80%**.
+- [x] **Gitmoji Support**: Alternative emoji-style commit formatting (`✨`, `🐛`, `📝`, etc.).
+- [x] **Interactive Onboarding Wizard**: `codesync init` command guides users through API keys, model selection, and endpoint configuration.
+- [x] **Git Pre-commit Hook Integration**: Native installation scripts for `commit-msg` hooks that trigger CLI for commit message generation.
+- [x] **Automatic Scope Detection**: Directory analyzer guesses and pre-fills commit scope based on which submodule contains the majority of modifications.
+- [x] **Multilingual Commits Support**: Configurable output language for generated commit messages (Chinese, English, Japanese, etc.).
+- [x] **AI-powered Changelog Generator**: Analyze log difference between two git tags/commit hashes and generate formatted Release Notes.
+- [x] **Commit Message Validation Guard**: Standalone script checks if commits follow Conventional Commit specifications.
 
 ---
 
-## 🚀 Phase 2: Configuration Wizard & Context Optimization (Next Up)
-Improving first-time user experience and optimizing LLM token consumption.
+## 🚀 Phase 2: Multi-Platform & Team Collaboration ✅ COMPLETED
 
-- [ ] **Interactive Onboarding Wizard**:
-  - Implement a `gca init` command to guide users through entering their API keys, selecting model targets, and configuring endpoints via CLI prompts.
-- [ ] **Lockfile & Asset Filtering**:
-  - Implement a smart filter to remove voluminous non-code modifications (like `package-lock.json`, `pnpm-lock.yaml`, binaries, or SVGs) from the sent `git diff`. This decreases token consumption by up to **80%**.
-- [ ] **Commit Style Customization**:
-  - Add configuration choices for alternative commit message guidelines, specifically supporting **Emoji-style (Gitmoji)** formatting:
-    - 🐛 `fix: bug description`
-    - ✨ `feat: feature description`
+Expanding platform support and team workflow features.
 
----
-
-## 🛠️ Phase 3: Developer Integration & Shell Hooks (Planned)
-Deepening integration into daily git habits and automatons.
-
-- [ ] **Git Pre-commit Hook Integration**:
-  - Create native installation scripts (using lightweight Husky-style shells) to automatically trigger the CLI when a developer runs a standard `git commit` command without parameters.
-- [ ] **Automatic Scope Detection**:
-  - Implement a directory analyzer to guess and pre-fill the commit scope `<type>(<scope>)` based on which submodule or source folder contains the majority of the modifications.
-- [ ] **Multilingual Commits Support**:
-  - Allow users to configure the output language of the generated commit message (e.g., generating commit explanations in Chinese, Spanish, or Japanese, while keeping type headers in standard English).
+- [x] **GitHub Platform Integration**: Create repos, get user info via GitHub API.
+- [x] **Gitee Platform Integration**: Create repos, get user info via Gitee API.
+- [x] **GitLab Platform Integration**: Create repos, get user info via GitLab API.
+- [x] **Team Configuration Sync**: `codesync team init` initializes shared team settings.
+- [x] **Team Enforcement Hooks**: `codesync team enforce` installs Git hooks that enforce team conventions on all members.
+- [x] **Three-Platform Unified Interface**: Single command supports `--platform github/gitee/gitlab` seamlessly.
 
 ---
 
-## 📈 Phase 4: Extended Maintenance Automation (Long-term)
-Expanding the scope of AI from individual commits to repository-level maintainer duties.
+## 🛠️ Phase 3: Desktop Application ✅ COMPLETED
 
-- [ ] **AI-powered Changelog Generator**:
-  - Extend the CLI to analyze the log difference between two git tags or commit hashes and automatically generate high-quality, formatted weekly/monthly Release Notes.
-- [ ] **Commit Message Validation Guard**:
-  - Provide a standalone script that checks if manually written local commits follow Conventional Commit specifications and rejects them with helpful tips if they fail.
+Cross-platform desktop GUI for non-CLI users.
+
+- [x] **Electron Main Process**: Complete main process with IPC handlers for all features.
+- [x] **Preload Security Bridge**: Secure contextBridge API exposure via `window.electronAPI`.
+- [x] **Seven-Page Frontend UI**: Upload, Download, History, AI Commit, AI Code, Team, Settings pages.
+- [x] **Custom Title Bar**: Frameless window with custom minimize/maximize/close controls.
+- [x] **Toast Notification System**: User-friendly feedback for all operations.
+- [x] **Platform Selector**: Visual GitHub/Gitee/GitLab selection for uploads.
+
+---
+
+## 🔧 Phase 4: Intelligence & Optimization (Current Development)
+
+Smart model selection and advanced AI features.
+
+- [x] **Smart Model Selection**: Automatically selects appropriate model based on diff complexity:
+  - Simple changes → `fastModel` (e.g., `gpt-4o-mini`)
+  - Complex changes → `smartModel` (e.g., `gpt-4o`)
+  - Power tasks → `powerfulModel` (e.g., `gpt-4o`)
+- [x] **Code Annotate**: `codesync ai annotate -f <file>` generates detailed Chinese comments.
+- [x] **Code Explain**: `codesync ai explain -f <file>` explains code functionality, parameters, and flow.
+- [x] **Code Review**: `codesync ai review -f <file>` reviews code quality, bugs, performance, and security.
+- [x] **Project Analysis**: `codesync git analyze` analyzes project structure.
+- [x] **Batch Operations**: `codesync git batch` for bulk Git operations.
+
+---
+
+## 📈 Phase 5: Testing & Polish (In Progress)
+
+Comprehensive test coverage and reliability improvements.
+
+- [x] **Shared Config Tests**: Test coverage for `shared/config.js`.
+- [x] **Shared Git Operations Tests**: Test coverage for `shared/git/operations.js`.
+- [x] **Shared Platform Tests**: Test coverage for `shared/platform/*.js`.
+- [x] **Desktop App Tests**: Test coverage for all desktop application files.
+- [ ] **Integration Tests**: End-to-end tests for upload/download/commit workflows.
+- [ ] **CLI Smoke Tests**: Verify all commands work from a fresh installation.
+
+---
+
+## 🌟 Phase 6: Future Considerations (Backlog)
+
+Long-term vision and community-requested features.
+
+- [ ] **Plugin System**: Extensible plugin architecture for custom AI providers and platforms.
+- [ ] **CI/CD Integration**: GitHub Actions / GitLab CI templates for automated commits.
+- [ ] **VS Code Extension**: Inline commit suggestions directly in VS Code editor.
+- [ ] **Web Dashboard**: Cloud-based project statistics and commit history visualization.
+- [ ] **Multi-repo Management**: GUI for managing multiple project repositories.
+- [ ] **Auto-deploy Hooks**: Trigger deployments after successful pushes.
+- [ ] **Commit Template Library**: Reusable commit templates for common patterns.
+- [ ] **AI-powered Code Review Bot**: Automated PR review comments via AI.
+
+---
+
+## 📊 Version History
+
+| Version | Date    | Highlights                                                          |
+| ------- | ------- | ------------------------------------------------------------------- |
+| v1.0.0  | 2026-06 | Initial release with core AI commit generation                      |
+| v1.1.0  | 2026-10 | Phase 1-4 completed: all features above                             |
+| v2.0.0  | 2026-10 | Architecture redesign (npm workspaces, shared modules, desktop app) |
+
+---
+
+## 🤝 How to Contribute to the Roadmap
+
+1. **Open an Issue**: Suggest new features or vote on existing ones.
+2. **Submit a PR**: Implement features marked as "planned" or "backlog".
+3. **Test and Report**: Help identify bugs in existing features.
+4. **Share Feedback**: Tell us which features matter most to you.
+
+---
+
+_Last updated: 2026-10-18_
