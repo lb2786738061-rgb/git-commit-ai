@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeSync Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card h3 {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .stat-card .value {
+      color: #333;
+      font-size: 36px;
+      font-weight: bold;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .commit-list {
+      list-style: none;
+    }
+
+    .commit-item {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .commit-item:last-child {
+      border-bottom: none;
+    }
+
+    .commit-hash {
+      color: #667eea;
+      font-family: monospace;
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .commit-subject {
+      color: #333;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .commit-meta {
+      color: #999;
+      font-size: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 CodeSync Dashboard</h1>
+      <p>项目 Git 统计与可视化</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>总提交数</h3>
+        <div class="value" id="totalCommits">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>贡献者</h3>
+        <div class="value" id="totalContributors">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>分支数</h3>
+        <div class="value" id="totalBranches">-</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📝 最近提交</h2>
+      <div id="commits" class="loading">加载中...</div>
+    </div>
+
+    <div class="card">
+      <h2>👥 贡献者</h2>
+      <div id="contributors" class="loading">加载中...</div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        document.getElementById('totalCommits').textContent = data.totalCommits;
+        document.getElementById('totalContributors').textContent = data.contributors.length;
+        document.getElementById('totalBranches').textContent = data.branches.length;
+
+        // 显示贡献者
+        const contributorsHtml = data.contributors.map(c => 
+          `<div class="commit-item">
+            <div class="commit-subject">${c.name}</div>
+            <div class="commit-meta">${c.count} 次提交</div>
+          </div>`
+        ).join('');
+        document.getElementById('contributors').innerHTML = `<ul class="commit-list">${contributorsHtml}</ul>`;
+      } catch (error) {
+        document.getElementById('totalCommits').textContent = 'Error';
+        console.error('Error fetching stats:', error);
+      }
+    }
+
+    async function fetchCommits() {
+      try {
+        const response = await fetch('/api/commits?limit=10');
+        const commits = await response.json();
+
+        const commitsHtml = commits.map(c => 
+          `<div class="commit-item">
+            <div class="commit-hash">${c.hash.substring(0, 7)}</div>
+            <div class="commit-subject">${c.subject}</div>
+            <div class="commit-meta">${c.author} · ${new Date(c.date).toLocaleString()}</div>
+          </div>`
+        ).join('');
+        document.getElementById('commits').innerHTML = `<ul class="commit-list">${commitsHtml}</ul>`;
+      } catch (error) {
+        document.getElementById('commits').innerHTML = '<div class="error">加载失败</div>';
+        console.error('Error fetching commits:', error);
+      }
+    }
+
+    // 初始化
+    fetchStats();
+    fetchCommits();
+  </script>
+</body>
+</html>

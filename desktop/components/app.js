@@ -14,6 +14,9 @@ const pages = {
   'ai-commit': renderAICommitPage,
   'ai-code': renderAICodePage,
   team: renderTeamPage,
+  pr: renderPRPage,
+  issues: renderIssuesPage,
+  performance: renderPerformancePage,
   settings: renderSettingsPage
 };
 
@@ -663,4 +666,191 @@ function renderSettingsPage(container) {
   }
 
   loadSettings();
+}
+
+// ── PR 管理页面 ────────────────────────────────────────────────
+
+function renderPRPage(container) {
+  container.appendChild(createPageHeader('PR 管理', '查看和管理 Pull Request'));
+
+  const prList = el('div', { class: 'pr-list' });
+  prList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '加载中...')));
+
+  container.appendChild(createCard('🔀 Pull Requests', prList));
+
+  (async () => {
+    try {
+      // 模拟 PR 数据（实际应该从 GitHub/GitLab API 获取）
+      const prs = [
+        { id: 1, title: 'feat: 添加用户认证功能', author: 'user1', status: 'open', created: '2026-10-18' },
+        { id: 2, title: 'fix: 修复登录 Bug', author: 'user2', status: 'merged', created: '2026-10-17' },
+        { id: 3, title: 'docs: 更新 README', author: 'user3', status: 'closed', created: '2026-10-16' }
+      ];
+
+      prList.innerHTML = '';
+
+      if (prs.length === 0) {
+        prList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '暂无 Pull Request')));
+        return;
+      }
+
+      prs.forEach(pr => {
+        const statusColors = {
+          open: 'pr-open',
+          merged: 'pr-merged',
+          closed: 'pr-closed'
+        };
+
+        const item = el('div', { class: 'pr-item' },
+          el('div', { class: `pr-status ${statusColors[pr.status]}` }, pr.status.toUpperCase()),
+          el('div', { class: 'pr-info' },
+            el('div', { class: 'pr-title' }, pr.title),
+            el('div', { class: 'pr-meta' },
+              el('span', {}, `#${pr.id}`),
+              el('span', {}, `by ${pr.author}`),
+              el('span', {}, pr.created)
+            )
+          ),
+          el('div', { class: 'pr-actions' },
+            createButton('查看', () => showToast('查看 PR 功能开发中', 'info'), 'secondary')
+          )
+        );
+        prList.appendChild(item);
+      });
+    } catch (err) {
+      prList.innerHTML = '';
+      prList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, `加载失败: ${err.message}`)));
+    }
+  })();
+}
+
+// ── Issue 跟踪页面 ──────────────────────────────────────────────
+
+function renderIssuesPage(container) {
+  container.appendChild(createPageHeader('Issue 跟踪', '查看和管理项目 Issue'));
+
+  const issueList = el('div', { class: 'issue-list' });
+  issueList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '加载中...')));
+
+  const newIssueBtn = createButton('新建 Issue', () => showToast('新建 Issue 功能开发中', 'info'), 'primary');
+
+  container.appendChild(el('div', { style: { marginBottom: '16px' } }, newIssueBtn));
+  container.appendChild(createCard('📋 Issues', issueList));
+
+  (async () => {
+    try {
+      // 模拟 Issue 数据
+      const issues = [
+        { id: 1, title: 'Bug: 页面加载缓慢', author: 'user1', status: 'open', priority: 'high', created: '2026-10-18' },
+        { id: 2, title: 'Feature: 添加暗色模式', author: 'user2', status: 'open', priority: 'medium', created: '2026-10-17' },
+        { id: 3, title: 'Docs: 补充 API 文档', author: 'user3', status: 'closed', priority: 'low', created: '2026-10-16' }
+      ];
+
+      issueList.innerHTML = '';
+
+      if (issues.length === 0) {
+        issueList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '暂无 Issue')));
+        return;
+      }
+
+      issues.forEach(issue => {
+        const priorityColors = {
+          high: 'priority-high',
+          medium: 'priority-medium',
+          low: 'priority-low'
+        };
+
+        const item = el('div', { class: 'issue-item' },
+          el('div', { class: `priority-badge ${priorityColors[issue.priority]}` }, issue.priority.toUpperCase()),
+          el('div', { class: 'issue-info' },
+            el('div', { class: 'issue-title' }, issue.title),
+            el('div', { class: 'issue-meta' },
+              el('span', {}, `#${issue.id}`),
+              el('span', {}, `by ${issue.author}`),
+              el('span', {}, issue.created)
+            )
+          ),
+          el('div', { class: 'issue-status' }, issue.status.toUpperCase())
+        );
+        issueList.appendChild(item);
+      });
+    } catch (err) {
+      issueList.innerHTML = '';
+      issueList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, `加载失败: ${err.message}`)));
+    }
+  })();
+}
+
+// ── 性能监控页面 ───────────────────────────────────────────────
+
+function renderPerformancePage(container) {
+  container.appendChild(createPageHeader('性能监控', '查看项目性能指标和健康度'));
+
+  const statsGrid = el('div', { class: 'stats-grid' });
+  
+  statsGrid.appendChild(el('div', { class: 'stat-card' },
+    el('div', { class: 'stat-label' }, '代码行数'),
+    el('div', { class: 'stat-value' }, '12,345')
+  ));
+  
+  statsGrid.appendChild(el('div', { class: 'stat-card' },
+    el('div', { class: 'stat-label' }, '文件数量'),
+    el('div', { class: 'stat-value' }, '234')
+  ));
+  
+  statsGrid.appendChild(el('div', { class: 'stat-card' },
+    el('div', { class: 'stat-label' }, '依赖数量'),
+    el('div', { class: 'stat-value' }, '56')
+  ));
+  
+  statsGrid.appendChild(el('div', { class: 'stat-card' },
+    el('div', { class: 'stat-label' }, '健康度评分'),
+    el('div', { class: 'stat-value' }, '85/100')
+  ));
+
+  container.appendChild(statsGrid);
+
+  const healthReport = el('div', { class: 'health-report' });
+  healthReport.innerHTML = `
+    <div class="health-item">
+      <span class="health-label">代码质量</span>
+      <span class="health-bar health-good" style="width: 85%"></span>
+      <span class="health-value">85%</span>
+    </div>
+    <div class="health-item">
+      <span class="health-label">测试覆盖率</span>
+      <span class="health-bar health-medium" style="width: 72%"></span>
+      <span class="health-value">72%</span>
+    </div>
+    <div class="health-item">
+      <span class="health-label">文档完整性</span>
+      <span class="health-bar health-good" style="width: 90%"></span>
+      <span class="health-value">90%</span>
+    </div>
+    <div class="health-item">
+      <span class="health-label">依赖安全性</span>
+      <span class="health-bar health-warning" style="width: 65%"></span>
+      <span class="health-value">65%</span>
+    </div>
+  `;
+
+  container.appendChild(createCard('📊 健康度报告', healthReport));
+
+  const suggestions = el('div', { class: 'suggestions' });
+  suggestions.innerHTML = `
+    <div class="suggestion-item">
+      <span class="suggestion-icon">⚠️</span>
+      <span class="suggestion-text">建议增加测试覆盖率到 80% 以上</span>
+    </div>
+    <div class="suggestion-item">
+      <span class="suggestion-icon">🔒</span>
+      <span class="suggestion-text">发现 3 个依赖存在安全漏洞，建议更新</span>
+    </div>
+    <div class="suggestion-item">
+      <span class="suggestion-icon">✅</span>
+      <span class="suggestion-text">代码结构良好，继续保持</span>
+    </div>
+  `;
+
+  container.appendChild(createCard('💡 优化建议', suggestions));
 }

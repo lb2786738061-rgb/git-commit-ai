@@ -79,7 +79,7 @@ export class GitOperations {
   /**
    * Clone 仓库
    */
-  async clone(url, targetPath, timeout = 120000) {
+  async clone(url, targetPath, timeout = 600000) {
     try {
       execFileSync('git', ['clone', url, targetPath], {
         stdio: 'pipe',

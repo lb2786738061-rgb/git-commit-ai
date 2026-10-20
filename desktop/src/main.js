@@ -10,7 +10,10 @@ const isDev = process.argv.includes('--dev');
 let mainWindow;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  const iconPath = path.join(__dirname, '../assets/icon.png');
+  const iconExists = fs.existsSync(iconPath);
+
+  const windowOptions = {
     width: 1100,
     height: 720,
     minWidth: 800,
@@ -22,9 +25,14 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     },
-    backgroundColor: '#0d1117',
-    icon: path.join(__dirname, '../assets/icon.png')
-  });
+    backgroundColor: '#0d1117'
+  };
+
+  if (iconExists) {
+    windowOptions.icon = iconPath;
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
 
   mainWindow.loadFile(path.join(__dirname, '../pages/index.html'));
 

@@ -1,0 +1,22 @@
+{
+  "name": "codesync-dashboard",
+  "version": "1.0.0",
+  "description": "CodeSync Web Dashboard",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": [
+    "dashboard",
+    "visualization",
+    "git"
+  ],
+  "author": "",
+  "license": "MIT"
+}

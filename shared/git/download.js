@@ -24,7 +24,7 @@ export async function downloadProject(options) {
   try {
     // 1. Clone 仓库
     onProgress(30, '克隆仓库...');
-    await git.clone(repoUrl, targetPath);
+    await git.clone(repoUrl, targetPath, 600000); // 10分钟超时
 
     // 2. 检查是否有 package.json
     const packageJsonPath = path.join(targetPath, 'package.json');

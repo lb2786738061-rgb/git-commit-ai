@@ -84,4 +84,11 @@ function setConfig(setValue) {
 
   writeConfig({ [key]: value });
   console.log(pc.green(`✓ 配置已更新: ${pc.bold(key)} = ${value}`));
+
+  // 立即重新读取并显示当前值（避免模块缓存导致的显示问题）
+  const updatedConfig = readConfig();
+  const actualValue = updatedConfig[key];
+  if (actualValue !== value) {
+    console.log(pc.dim(`  当前值: ${actualValue}`));
+  }
 }

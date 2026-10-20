@@ -1,0 +1,169 @@
+{
+  "name": "codesync-vscode",
+  "displayName": "CodeSync - AI Git Assistant",
+  "description": "AI-powered Git commit message generator and code assistant",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "activationEvents": [
+    "onView:codesync.commitPanel",
+    "onCommand:codesync.generateCommit",
+    "onCommand:codesync.explainCode",
+    "onCommand:codesync.annotateCode",
+    "onCommand:codesync.reviewCode"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codesync-container",
+          "title": "CodeSync",
+          "icon": "icons/codesync.svg"
+        }
+      ]
+    },
+    "views": {
+      "codesync-container": [
+        {
+          "id": "codesync.commitPanel",
+          "name": "Commit Assistant"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "codesync.generateCommit",
+        "title": "Generate Commit Message",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "codesync.explainCode",
+        "title": "Explain Selected Code",
+        "icon": "$(symbol-class)"
+      },
+      {
+        "command": "codesync.annotateCode",
+        "title": "Annotate Selected Code",
+        "icon": "$(comment-discard)"
+      },
+      {
+        "command": "codesync.reviewCode",
+        "title": "Review Selected Code",
+        "icon": "$(search-refresh)"
+      },
+      {
+        "command": "codesync.refreshDiff",
+        "title": "Refresh Diff",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "codesync.openSettings",
+        "title": "Open Settings",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codesync.explainCode",
+          "when": "editorHasSelection",
+          "group": "codesync@1"
+        },
+        {
+          "command": "codesync.annotateCode",
+          "when": "editorHasSelection",
+          "group": "codesync@2"
+        },
+        {
+          "command": "codesync.reviewCode",
+          "when": "editorHasSelection",
+          "group": "codesync@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "codesync.refreshDiff",
+          "when": "view == codesync.commitPanel",
+          "group": "navigation"
+        },
+        {
+          "command": "codesync.openSettings",
+          "when": "view == codesync.commitPanel",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codesync.generateCommit",
+          "when": "view == codesync.commitPanel",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeSync",
+      "properties": {
+        "codesync.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key",
+          "order": 1
+        },
+        "codesync.apiBase": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "API Base URL",
+          "order": 2
+        },
+        "codesync.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "Default AI model",
+          "order": 3
+        },
+        "codesync.convention": {
+          "type": "string",
+          "enum": ["angular", "gitmoji"],
+          "default": "angular",
+          "description": "Commit message convention",
+          "order": 4
+        },
+        "codesync.language": {
+          "type": "string",
+          "enum": ["en", "zh", "ja"],
+          "default": "en",
+          "description": "Commit message language",
+          "order": 5
+        },
+        "codesync.smartModel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable smart model selection",
+          "order": 6
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "node build.js",
+    "watch": "node build.js --watch",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
+}
