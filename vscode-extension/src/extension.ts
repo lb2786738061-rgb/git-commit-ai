@@ -2,10 +2,15 @@ import * as vscode from 'vscode';
 import { CommitPanelProvider } from './commitPanelProvider';
 import { CodeAssistant } from './codeAssistant';
 import { ConfigManager } from './configManager';
+import { GitService } from './gitService';
+import { uploadCommand } from './commands/upload';
+import { syncCommand } from './commands/sync';
+import { setTokenCommand, showConfigCommand } from './commands/config';
 
 let commitPanelProvider: CommitPanelProvider;
 let codeAssistant: CodeAssistant;
 let configManager: ConfigManager;
+let gitService: GitService;
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('CodeSync extension is now active!');
@@ -13,7 +18,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize managers
   configManager = new ConfigManager();
   codeAssistant = new CodeAssistant(configManager);
-  commitPanelProvider = new CommitPanelProvider(context, codeAssistant);
+  gitService = new GitService(configManager);
+  commitPanelProvider = new CommitPanelProvider(context, codeAssistant, gitService, configManager);
 
   // Register commit panel view
   const commitPanelView = vscode.window.createTreeView('codesync.commitPanel', {
@@ -39,7 +45,27 @@ export function activate(context: vscode.ExtensionContext) {
       commitPanelProvider.refresh();
     }),
     vscode.commands.registerCommand('codesync.openSettings', () => {
-      vscode.commands.executeCommand('workbench.action.openSettings', 'codesync');
+      configManager.openSettings();
+    }),
+
+    // 一键上传项目到远程仓库
+    vscode.commands.registerCommand('codesync.upload', () => {
+      uploadCommand(gitService, configManager);
+    }),
+
+    // 提交并推送
+    vscode.commands.registerCommand('codesync.sync', () => {
+      syncCommand(gitService, configManager);
+    }),
+
+    // 配置平台 Token
+    vscode.commands.registerCommand('codesync.setToken', () => {
+      setTokenCommand(configManager);
+    }),
+
+    // 查看当前配置
+    vscode.commands.registerCommand('codesync.showConfig', () => {
+      showConfigCommand(configManager);
     })
   ];
 
@@ -57,10 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Register all disposables
-  context.subscriptions.push(
-    commitPanelView,
-    ...commands
-  );
+  context.subscriptions.push(commitPanelView, ...commands);
 }
 
 export function deactivate() {

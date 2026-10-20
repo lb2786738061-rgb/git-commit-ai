@@ -92,3 +92,60 @@ export async function uploadProject(options) {
     throw new Error(`上传失败: ${error.message}`);
   }
 }
+
+/**
+ * 增量同步已有仓库：暂存改动 → 生成提交信息 → 提交 → 推送到远程
+ * @param {object} options 同步选项
+ * @param {string} options.projectPath 项目路径
+ * @param {string} [options.message] 提交信息（不传则由 AI 生成）
+ * @param {string} [options.remote='origin'] 远程仓库名
+ * @param {boolean} [options.bypassHooks=false] 是否跳过 Git 钩子校验
+ * @param {function} options.onProgress 进度回调
+ * @returns {Promise<{committed: boolean, commitMessage?: string, branch?: string, reason?: string}>}
+ */
+export async function syncProject(options) {
+  const {
+    projectPath,
+    message,
+    remote = 'origin',
+    bypassHooks = false,
+    onProgress = () => {}
+  } = options;
+
+  const git = new GitOperations(projectPath);
+
+  if (!GitOperations.isGitRepository(projectPath)) {
+    throw new Error('当前目录不是 Git 仓库');
+  }
+
+  try {
+    onProgress(10, '添加文件...');
+    await git.addAll();
+
+    onProgress(25, '检查变更...');
+    const diff = await git.getStagedDiff();
+
+    if (!diff || !diff.trim()) {
+      onProgress(100, '没有需要提交的更改');
+      return { committed: false, reason: 'no-changes' };
+    }
+
+    let commitMessage = message;
+    if (!commitMessage) {
+      onProgress(45, '生成提交信息...');
+      commitMessage = await generateCommitMessage(diff, '');
+    }
+
+    onProgress(65, '提交更改...');
+    await git.commit(commitMessage, { bypassHooks });
+
+    onProgress(80, '推送到远程...');
+    const branch = await git.getCurrentBranch();
+    await git.push(remote, branch);
+
+    onProgress(100, '同步完成！');
+    return { committed: true, commitMessage, branch };
+  } catch (error) {
+    throw new Error(`同步失败: ${error.message}`);
+  }
+}

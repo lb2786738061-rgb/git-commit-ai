@@ -1,4 +1,14 @@
-import { readConfig } from '../config.js';
+﻿import { readConfig } from '../config.js';
+
+/**
+ * 拼接 API 地址（去掉末尾多余的斜杠）
+ * @param {string} apiBase
+ * @returns {string}
+ */
+function buildChatUrl(apiBase) {
+  const base = (apiBase || '').trim().replace(/\/+$/, '');
+  return `${base}/chat/completions`;
+}
 
 /**
  * 为代码生成详细注释
@@ -25,7 +35,7 @@ ${code}
 5. 输出完整的带注释代码`;
 
   try {
-    const response = await fetch(`${config.apiBase}/chat/completions`, {
+    const response = await fetch(buildChatUrl(config.apiBase), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +92,7 @@ ${code}
 请用通俗易懂的语言解释，适合初学者理解。`;
 
   try {
-    const response = await fetch(`${config.apiBase}/chat/completions`, {
+    const response = await fetch(buildChatUrl(config.apiBase), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -140,7 +150,7 @@ ${code}
 请给出具体的改进建议，包括代码示例。`;
 
   try {
-    const response = await fetch(`${config.apiBase}/chat/completions`, {
+    const response = await fetch(buildChatUrl(config.apiBase), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

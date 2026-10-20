@@ -1,21 +1,52 @@
 {
   "name": "codesync-vscode",
   "displayName": "CodeSync - AI Git Assistant",
-  "description": "AI-powered Git commit message generator and code assistant",
-  "version": "0.0.1",
+  "description": "在 VS Code 里一键上传代码到 GitHub/Gitee/GitLab，AI 生成提交信息、注解、解释与审查。与 CLI、桌面版共用同一套核心逻辑与配置。",
+  "version": "1.0.0",
+  "publisher": "lb2786738061-rgb",
+  "license": "MIT",
+  "icon": "icons/codesync.png",
+  "galleryBanner": {
+    "color": "#0d1117",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lb2786738061-rgb/git-commit-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lb2786738061-rgb/git-commit-ai/issues"
+  },
+  "homepage": "https://github.com/lb2786738061-rgb/git-commit-ai#readme",
+  "keywords": [
+    "git",
+    "ai",
+    "commit",
+    "github",
+    "gitee",
+    "gitlab",
+    "upload",
+    "code-review",
+    "conventional-commits"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other",
-    "SCM Providers"
+    "SCM Providers",
+    "Programming Languages"
   ],
   "activationEvents": [
     "onView:codesync.commitPanel",
     "onCommand:codesync.generateCommit",
     "onCommand:codesync.explainCode",
     "onCommand:codesync.annotateCode",
-    "onCommand:codesync.reviewCode"
+    "onCommand:codesync.reviewCode",
+    "onCommand:codesync.upload",
+    "onCommand:codesync.sync",
+    "onCommand:codesync.setToken",
+    "onCommand:codesync.showConfig"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -40,31 +71,61 @@
       {
         "command": "codesync.generateCommit",
         "title": "Generate Commit Message",
+        "category": "CodeSync",
         "icon": "$(edit)"
       },
       {
         "command": "codesync.explainCode",
         "title": "Explain Selected Code",
+        "category": "CodeSync",
         "icon": "$(symbol-class)"
       },
       {
         "command": "codesync.annotateCode",
         "title": "Annotate Selected Code",
+        "category": "CodeSync",
         "icon": "$(comment-discard)"
       },
       {
         "command": "codesync.reviewCode",
         "title": "Review Selected Code",
+        "category": "CodeSync",
         "icon": "$(search-refresh)"
+      },
+      {
+        "command": "codesync.upload",
+        "title": "Upload Project to Remote Repository",
+        "category": "CodeSync",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "codesync.sync",
+        "title": "Commit and Push",
+        "category": "CodeSync",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "codesync.setToken",
+        "title": "Configure Platform Token",
+        "category": "CodeSync",
+        "icon": "$(key)"
+      },
+      {
+        "command": "codesync.showConfig",
+        "title": "Show Current Configuration",
+        "category": "CodeSync",
+        "icon": "$(output)"
       },
       {
         "command": "codesync.refreshDiff",
         "title": "Refresh Diff",
+        "category": "CodeSync",
         "icon": "$(refresh)"
       },
       {
         "command": "codesync.openSettings",
         "title": "Open Settings",
+        "category": "CodeSync",
         "icon": "$(settings-gear)"
       }
     ],
@@ -88,14 +149,34 @@
       ],
       "view/title": [
         {
+          "command": "codesync.upload",
+          "when": "view == codesync.commitPanel",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codesync.sync",
+          "when": "view == codesync.commitPanel",
+          "group": "navigation@2"
+        },
+        {
           "command": "codesync.refreshDiff",
           "when": "view == codesync.commitPanel",
-          "group": "navigation"
+          "group": "navigation@3"
+        },
+        {
+          "command": "codesync.setToken",
+          "when": "view == codesync.commitPanel",
+          "group": "1_config@1"
+        },
+        {
+          "command": "codesync.showConfig",
+          "when": "view == codesync.commitPanel",
+          "group": "1_config@2"
         },
         {
           "command": "codesync.openSettings",
           "when": "view == codesync.commitPanel",
-          "group": "navigation"
+          "group": "1_config@3"
         }
       ],
       "view/item/context": [
@@ -103,6 +184,12 @@
           "command": "codesync.generateCommit",
           "when": "view == codesync.commitPanel",
           "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codesync.refreshDiff",
+          "when": "view == codesync.commitPanel"
         }
       ]
     },
@@ -112,40 +199,89 @@
         "codesync.apiKey": {
           "type": "string",
           "default": "",
-          "description": "OpenAI API Key",
+          "markdownDescription": "OpenAI API Key。留空则使用 `~/.git-commit-ai.json` 中与 CLI / 桌面版共用的配置。",
           "order": 1
         },
         "codesync.apiBase": {
           "type": "string",
-          "default": "https://api.openai.com/v1",
-          "description": "API Base URL",
+          "default": "",
+          "markdownDescription": "API Base URL。留空则使用 `~/.git-commit-ai.json` 中的配置。",
           "order": 2
         },
         "codesync.model": {
           "type": "string",
-          "default": "gpt-4o-mini",
-          "description": "Default AI model",
+          "default": "",
+          "markdownDescription": "默认 AI 模型。留空则使用 `~/.git-commit-ai.json` 中的配置。",
           "order": 3
         },
         "codesync.convention": {
           "type": "string",
           "enum": ["angular", "gitmoji"],
-          "default": "angular",
-          "description": "Commit message convention",
+          "default": "",
+          "markdownDescription": "提交信息规范。留空则使用 `~/.git-commit-ai.json` 中的配置。",
           "order": 4
         },
         "codesync.language": {
           "type": "string",
           "enum": ["en", "zh", "ja"],
-          "default": "en",
-          "description": "Commit message language",
+          "default": "",
+          "markdownDescription": "提交信息语言。留空则使用 `~/.git-commit-ai.json` 中的配置。",
           "order": 5
         },
         "codesync.smartModel": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable smart model selection",
+          "type": ["boolean", "null"],
+          "default": null,
+          "markdownDescription": "启用智能模型选择（根据 diff 复杂度选择快/慢模型）。留空则使用 `~/.git-commit-ai.json` 中的配置。",
           "order": 6
+        },
+        "codesync.fastModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "快速模型。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "order": 7
+        },
+        "codesync.powerfulModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "强大模型。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "order": 8
+        },
+        "codesync.githubToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "GitHub Token。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "order": 9
+        },
+        "codesync.giteeToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Gitee Token。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "order": 10
+        },
+        "codesync.gitlabToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "GitLab Token。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "order": 11
+        },
+        "codesync.gitlabBase": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "GitLab API 地址。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "order": 12
+        },
+        "codesync.platform": {
+          "type": "string",
+          "enum": ["github", "gitee", "gitlab"],
+          "default": "github",
+          "description": "上传时默认选中的代码托管平台",
+          "order": 13
+        },
+        "codesync.bypassHooks": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "提交时跳过 Git 钩子校验（如团队提交规范强制钩子）。关闭时团队规范会被强制执行。",
+          "order": 14
         }
       }
     }
@@ -154,16 +290,15 @@
     "vscode:prepublish": "npm run compile",
     "compile": "node build.js",
     "watch": "node build.js --watch",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "npm run typecheck",
+    "test": "npm run compile && npm run typecheck"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
+    "@vscode/vsce": "^2.24.0",
     "esbuild": "^0.19.0",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "openai": "^4.0.0"
   }
 }

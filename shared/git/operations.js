@@ -47,13 +47,22 @@ export class GitOperations {
 
   /**
    * 提交更改
+   * @param {string} message 提交信息
+   * @param {object} [options] 选项
+   * @param {boolean} [options.bypassHooks=false] 是否跳过 Git 钩子校验
    */
-  async commit(message) {
+  async commit(message, options = {}) {
+    const { bypassHooks = false } = options;
     try {
-      execFileSync('git', ['commit', '-m', message], {
+      const args = ['commit'];
+      if (bypassHooks) {
+        args.push('--no-verify');
+      }
+      args.push('-m', message);
+      execFileSync('git', args, {
         cwd: this.projectPath,
         stdio: 'pipe',
-        env: { ...process.env, GCA_BYPASS_HOOK: '1' }
+        env: { ...process.env, GCA_BYPASS_HOOK: bypassHooks ? '1' : '0' }
       });
       return true;
     } catch (error) {
@@ -244,6 +253,33 @@ export class GitOperations {
       return output.toString().trim();
     } catch (error) {
       throw new Error(`获取当前分支失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取已配置的远程仓库列表
+   * @returns {Promise<Array<{name: string, url: string}>>}
+   */
+  async getRemotes() {
+    try {
+      const output = execFileSync('git', ['remote', '-v'], {
+        cwd: this.projectPath,
+        stdio: 'pipe',
+        encoding: 'utf-8'
+      });
+      const remotes = [];
+      const seen = new Set();
+      for (const line of output.split('\n')) {
+        const match = line.trim().match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/);
+        if (!match) continue;
+        const [, name, url] = match;
+        if (seen.has(name)) continue;
+        seen.add(name);
+        remotes.push({ name, url });
+      }
+      return remotes;
+    } catch (error) {
+      return [];
     }
   }
 

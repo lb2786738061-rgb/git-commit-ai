@@ -21,6 +21,15 @@ export class CommitTreeItem extends vscode.TreeItem {
     } else if (contextValue === 'files') {
       this.iconPath = new vscode.ThemeIcon('files');
       this.contextValue = 'files';
+    } else if (contextValue === 'upload') {
+      this.iconPath = new vscode.ThemeIcon('cloud-upload');
+      this.contextValue = 'upload';
+    } else if (contextValue === 'sync') {
+      this.iconPath = new vscode.ThemeIcon('sync');
+      this.contextValue = 'sync';
+    } else if (contextValue === 'empty') {
+      this.iconPath = new vscode.ThemeIcon('info');
+      this.contextValue = 'empty';
     }
   }
 }
