@@ -76,11 +76,11 @@ program
   );
 
 program
-  .command('config')
-  .description('配置管理')
+  .command('config [action] [params...]')
+  .description('配置管理 (支持 codesync config set key=value 或 codesync config --list)')
   .option('-s, --set <key=value>', '设置配置项')
   .option('-l, --list', '列出所有配置')
-  .action(configCommand);
+  .action((...args) => configCommand(...args));
 
 program
   .command('team')
@@ -303,14 +303,29 @@ program
 
           const existing = readConfig();
 
+          const defaultModelValues = ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
+          let initialModelIndex = 0;
+          if (existing.model) {
+            const foundIdx = defaultModelValues.indexOf(existing.model);
+            initialModelIndex = foundIdx !== -1 ? foundIdx : 3;
+          }
+
           return prompts([
             { type: 'text', name: 'apiKey', message: 'OpenAI API Key:', initial: existing.apiKey || '' },
             { type: 'text', name: 'apiBase', message: 'API Base URL:', initial: existing.apiBase || 'https://api.openai.com/v1' },
             { type: 'select', name: 'model', message: '选择默认模型:', choices: [
               { title: 'gpt-4o-mini (快速)', value: 'gpt-4o-mini' },
               { title: 'gpt-4o (强大)', value: 'gpt-4o' },
-              { title: 'gpt-3.5-turbo (经济)', value: 'gpt-3.5-turbo' }
-            ], initial: 0 },
+              { title: 'gpt-3.5-turbo (经济)', value: 'gpt-3.5-turbo' },
+              { title: '自定义模型...', value: 'custom' }
+            ], initial: initialModelIndex },
+            {
+              type: (prev) => prev === 'custom' ? 'text' : null,
+              name: 'customModel',
+              message: '输入自定义模型名称:',
+              initial: existing.model && !defaultModelValues.includes(existing.model) ? existing.model : '',
+              validate: (val) => val && val.trim().length > 0 ? true : '模型名称不能为空'
+            },
             { type: 'select', name: 'convention', message: '选择提交规范:', choices: [
               { title: 'Angular 规范', value: 'angular' },
               { title: 'Gitmoji 规范', value: 'gitmoji' }
@@ -322,10 +337,14 @@ program
             ], initial: existing.language === 'zh' ? 1 : existing.language === 'ja' ? 2 : 0 },
             { type: 'confirm', name: 'smartModel', message: '启用智能模型选择?', initial: existing.smartModel !== false }
           ]).then((response) => {
-            if (response.apiKey === undefined) {
+            if (response.apiKey === undefined || (response.model === 'custom' && !response.customModel)) {
               console.log(pc.yellow('\n操作已取消。'));
               return;
             }
+            if (response.model === 'custom') {
+              response.model = response.customModel.trim();
+            }
+            delete response.customModel;
             writeConfig(response);
             console.log(pc.green('\n✅ 配置已保存！'));
           });

@@ -1,417 +1,417 @@
-# 🚀 CodeSync v2.0 - 智能 Git + AI 代码助手
+# 🚀 CodeSync v2.0 - Smart Git + AI Code Assistant
 
 <div align="center">
 
-**简化 Git 操作 + AI 代码助手**
+**Simplify Git Operations + AI Code Assistant**
 
-告别繁琐的 Git 命令，让不会 Git 的人也能轻松管理代码，AI 辅助提升开发效率。
+Say goodbye to cumbersome Git commands, so that anyone unfamiliar with Git can easily manage their code, and AI assistance boosts development efficiency.
 
 [![npm version](https://img.shields.io/npm/v/codesync.svg)](https://www.npmjs.com/package/codesync)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Features](https://img.shields.io/badge/features-14%20new-green.svg)](FEATURES_COMPLETE.md)
 [![Completion](https://img.shields.io/badge/completion-82.4%25-brightgreen.svg)](IMPLEMENTATION_REPORT.md)
 
-[English](README_EN.md) | 简体中文
+[English](README_EN.md) | Simplified Chinese
 
 </div>
 
 ---
 
-## ✨ 核心特性
+## ✨ Core Features
 
-### 🎯 一键操作
-- **一键上传** - 自动初始化仓库、AI 生成提交信息、创建远程仓库、推送
-- **一键下载** - 自动克隆、自动安装依赖（npm/pnpm/yarn）
-- **智能更新** - 自动检测变更、生成提交信息、推送到远程
+### 🎯 One-Click Operations
+- **One-Click Upload** - Automatically initializes the repository, generates the commit message with AI, creates the remote repository, and pushes
+- **One-Click Download** - Automatically clones and automatically installs dependencies (npm/pnpm/yarn)
+- **Smart Update** - Automatically detects changes, generates the commit message, and pushes to the remote
 
-### 🤖 AI 代码助手
-- **智能提交** - 分析 diff 复杂度，自动选择合适模型，生成规范的提交信息
-- **代码注解** - 为任意代码文件生成详细中文注释
-- **代码解释** - 详细解释代码功能、关键函数、执行流程
-- **代码审查** - 从质量、潜在 bug、性能、安全性角度全面审查
-- **自动生成 Changelog** - 分析两个版本标签之间的所有提交，自动生成更新日志
+### 🤖 AI Code Assistant
+- **Smart Commit** - Analyzes diff complexity, automatically selects the appropriate model, and generates a conventional commit message
+- **Code Annotation** - Generates detailed Chinese comments for any code file
+- **Code Explanation** - Explains in detail the code's functionality, key functions, and execution flow
+- **Code Review** - Comprehensive review from the perspectives of quality, potential bugs, performance, and security
+- **Automatic Changelog Generation** - Analyzes all commits between two version tags and automatically generates the changelog
 
-### 🤖 智能代码上传助手 ⭐ 新功能
-- **完全自动化** - 自动监听文件变化，无需手动操作
-- **智能策略** - 4 种上传策略：智能、立即、批量、定时
-- **AI 生成** - 自动生成规范的提交信息
-- **自动推送** - 自动提交并推送到远程仓库
+### 🤖 Smart Code Upload Assistant ⭐ New Feature
+- **Fully Automated** - Automatically monitors file changes, no manual operation required
+- **Smart Strategy** - 4 upload strategies: smart, immediate, batch, scheduled
+- **AI Generated** - Automatically generates conventional commit messages
+- **Automatic Push** - Automatically commits and pushes to the remote repository
 
-### 🎣 Pre-commit Hook 模板 ⭐ 新功能
-- **ESLint** - 代码质量检查
-- **Prettier** - 代码格式化
-- **TypeScript** - 类型检查
-- **Test** - 自动运行测试
-- **All** - 综合检查
+### 🎣 Pre-commit Hook Templates ⭐ New Feature
+- **ESLint** - Code quality checks
+- **Prettier** - Code formatting
+- **TypeScript** - Type checking
+- **Test** - Automatically runs the tests
+- **All** - Comprehensive checks
 
-### 📝 提交模板库 ⭐ 新功能
-- **8 个内置模板** - Bug Fix、Feature、Refactor、Documentation 等
-- **自定义模板** - 支持自定义提交模板
-- **模板变量** - 支持 {{ticket}}、{{author}}、{{date}} 等变量
+### 📝 Commit Template Library ⭐ New Feature
+- **8 Built-in Templates** - Bug Fix, Feature, Refactor, Documentation, etc.
+- **Custom Templates** - Supports custom commit templates
+- **Template Variables** - Supports variables such as {{ticket}}, {{author}}, {{date}}
 
-### 📊 Web Dashboard ⭐ 新功能
-- **项目统计** - 提交数量、贡献者、分支统计
-- **提交历史** - 可视化提交历史
-- **文件变更** - 文件变更统计
+### 📊 Web Dashboard ⭐ New Feature
+- **Project Statistics** - Commit counts, contributors, branch statistics
+- **Commit History** - Visualized commit history
+- **File Changes** - File change statistics
 
-### 🔌 插件系统 ⭐ 新功能
-- **可扩展架构** - 支持 AI Provider、Platform、Hook 插件
-- **插件管理** - 安装、卸载、加载插件
-- **社区生态** - 支持社区贡献插件
+### 🔌 Plugin System ⭐ New Feature
+- **Extensible Architecture** - Supports AI Provider, Platform, and Hook plugins
+- **Plugin Management** - Install, uninstall, and load plugins
+- **Community Ecosystem** - Supports community-contributed plugins
 
-### 🚀 自动化部署 ⭐ 新功能
-- **Vercel** - 自动部署到 Vercel
-- **Netlify** - 自动部署到 Netlify
-- **Docker** - 自动构建 Docker 镜像
-- **NPM** - 自动发布到 NPM
+### 🚀 Automated Deployment ⭐ New Feature
+- **Vercel** - Automatically deploys to Vercel
+- **Netlify** - Automatically deploys to Netlify
+- **Docker** - Automatically builds Docker images
+- **NPM** - Automatically publishes to NPM
 
-### 📦 Release 自动化 ⭐ 新功能
-- **自动 Tag** - 创建 Git Tag
-- **自动推送** - 推送 Tag 到远程
-- **自动 Notes** - 生成 Release Notes
-- **自动创建** - 创建 GitHub Release
+### 📦 Release Automation ⭐ New Feature
+- **Automatic Tag** - Creates a Git Tag
+- **Automatic Push** - Pushes the Tag to the remote
+- **Automatic Notes** - Generates Release Notes
+- **Automatic Creation** - Creates a GitHub Release
 
-### 🔍 代码搜索 ⭐ 新功能
-- **文本搜索** - 基于 ripgrep 的快速搜索
-- **语义搜索** - 基于关键词的智能搜索
-- **上下文显示** - 显示代码上下文
+### 🔍 Code Search ⭐ New Feature
+- **Text Search** - Fast search based on ripgrep
+- **Semantic Search** - Intelligent search based on keywords
+- **Context Display** - Shows the code context
 
-### 🔒 安全检测
-- **敏感信息扫描** - API Key、Token、密码检测
-- **许可证合规** - 依赖许可证扫描和合规性检查
+### 🔒 Security Detection
+- **Sensitive Information Scanning** - Detects API keys, tokens, and passwords
+- **License Compliance** - Dependency license scanning and compliance checking
 
-### 👥 团队协作
-- **团队配置同步** - 统一团队的提交规范、API 配置、模型选择
-- **Git 钩子强制校验** - 团队成员提交时自动校验提交信息格式
+### 👥 Team Collaboration
+- **Team Configuration Sync** - Unifies the team's commit conventions, API configuration, and model selection
+- **Git Hook Enforcement** - Automatically validates the commit message format when team members commit
 
-### 💻 VS Code 扩展
-- **提交信息侧边栏** - 实时查看暂存区更改，一键生成提交信息
-- **右键菜单 AI 功能** - 选中文本后可直接调用 AI 解释/注解/审查
-- **实时 Diff 预览** - 在侧边栏查看暂存区代码变更
+### 💻 VS Code Extension
+- **Commit Message Sidebar** - View staged changes in real time and generate a commit message with one click
+- **Right-Click Menu AI Features** - After selecting text, directly invoke AI explain/annotate/review
+- **Real-time Diff Preview** - View staged code changes in the sidebar
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 安装
+### Installation
 
 ```bash
-# 克隆项目
+# Clone the project
 git clone <repo-url>
 cd git-commit-ai
 
-# 安装依赖
+# Install dependencies
 npm install
 
-# 全局链接 CLI
+# Link the CLI globally
 npm run link:cli
 
-# 验证安装
+# Verify the installation
 codesync --version
 ```
 
-### 配置
+### Configuration
 
 ```bash
-# 交互式配置向导
+# Interactive configuration wizard
 codesync init
 ```
 
-### 使用
+### Usage
 
-#### 方式 1：手动上传
+#### Method 1: Manual Upload
 
 ```bash
-# 上传当前项目到 GitHub
+# Upload the current project to GitHub
 codesync upload --platform github --name my-project
 ```
 
-#### 方式 2：智能体自动上传 ⭐ 推荐
+#### Method 2: Agent Automatic Upload ⭐ Recommended
 
 ```bash
-# 配置智能体
+# Configure the agent
 codesync agent-init
 
-# 启动智能体
+# Start the agent
 codesync agent start
 
-# 现在正常开发代码，智能体自动上传！
+# Now just develop code normally, and the agent uploads automatically!
 ```
 
 ---
 
-## 📖 核心功能使用
+## 📖 Usage of Core Features
 
-### 🤖 智能代码上传助手
+### 🤖 Smart Code Upload Assistant
 
 ```bash
-# 配置向导
+# Configuration wizard
 codesync agent-init
 
-# 启动智能体
+# Start the agent
 codesync agent start
 
-# 查看状态
+# View status
 codesync agent status
 
-# 停止智能体
+# Stop the agent
 codesync agent stop
 ```
 
-**详细文档**: [AGENT_GUIDE.md](AGENT_GUIDE.md)
+**Detailed documentation**: [AGENT_GUIDE.md](AGENT_GUIDE.md)
 
-### AI 智能提交
+### AI Smart Commit
 
 ```bash
-# 分析 diff，AI 生成提交信息
+# Analyze the diff and generate the commit message with AI
 codesync ai commit
 
-# 快速模式（直接提交）
+# Quick mode (commit directly)
 codesync ai commit --yes
 
-# 指定规范
+# Specify the convention
 codesync ai commit --convention gitmoji
 ```
 
-### AI 代码助手
+### AI Code Assistant
 
 ```bash
-# 代码注解
+# Code annotation
 codesync ai annotate -f src/app.js
 
-# 代码解释
+# Code explanation
 codesync ai explain -f src/app.js
 
-# 代码审查
+# Code review
 codesync ai review -f src/app.js
 ```
 
-### Pre-commit Hook 模板
+### Pre-commit Hook Templates
 
 ```bash
-# 列出可用模板
+# List the available templates
 codesync hook list
 
-# 安装 ESLint Hook
+# Install the ESLint hook
 codesync hook install --template eslint
 
-# 安装综合检查 Hook
+# Install the comprehensive check hook
 codesync hook install --template all
 ```
 
-### 提交模板库
+### Commit Template Library
 
 ```bash
-# 列出所有模板
+# List all templates
 codesync template list
 
-# 使用模板
+# Use a template
 codesync template use --name feature
 
-# 添加自定义模板
+# Add a custom template
 codesync template add --name my-template --template "..."
 ```
 
 ### Web Dashboard
 
 ```bash
-# 启动 Dashboard
+# Start the Dashboard
 codesync dashboard
 
-# 访问 http://localhost:3001
+# Visit http://localhost:3001
 ```
 
-### 插件系统
+### Plugin System
 
 ```bash
-# 列出已安装插件
+# List the installed plugins
 codesync plugin list
 
-# 安装插件
+# Install a plugin
 codesync plugin install --name my-plugin --type ai-provider --path ./plugins/my-plugin.js
 ```
 
-### 自动化部署
+### Automated Deployment
 
 ```bash
-# 列出支持的部署平台
+# List the supported deployment platforms
 codesync deploy list
 
-# 配置 Docker 部署
+# Configure Docker deployment
 codesync deploy hook --platform docker
 ```
 
-### Release 自动化
+### Release Automation
 
 ```bash
-# 创建 Release
+# Create a Release
 codesync release 1.0.0
 
-# 创建预发布版本
+# Create a pre-release version
 codesync release 1.0.0-beta.1 --prerelease
 ```
 
-### 代码搜索
+### Code Search
 
 ```bash
-# 搜索代码
+# Search the code
 codesync search "function login"
 
-# 语义搜索
+# Semantic search
 codesync search "api authentication" --type semantic
 ```
 
-### 安全检测
+### Security Detection
 
 ```bash
-# 扫描敏感信息
+# Scan for sensitive information
 codesync security scan
 
-# 许可证合规检测
+# License compliance detection
 codesync security license
 ```
 
 ---
 
-## 📋 完整命令列表
+## 📋 Complete Command List
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `codesync upload` | 上传当前项目到远程仓库 |
-| `codesync download <url>` | 克隆远程项目到本地 |
-| `codesync update` | 更新当前项目 |
-| `codesync ai commit` | AI 生成提交信息 |
-| `codesync ai annotate -f <file>` | 代码注解 |
-| `codesync ai explain -f <file>` | 代码解释 |
-| `codesync ai review -f <file>` | 代码审查 |
-| `codesync agent-init` | 智能体配置向导 ⭐ |
-| `codesync agent start` | 启动智能体 ⭐ |
-| `codesync agent stop` | 停止智能体 ⭐ |
-| `codesync agent status` | 查看智能体状态 ⭐ |
-| `codesync hook install` | 安装 Pre-commit Hook ⭐ |
-| `codesync template use` | 使用提交模板 ⭐ |
-| `codesync dashboard` | 启动 Web Dashboard ⭐ |
-| `codesync plugin install` | 安装插件 ⭐ |
-| `codesync deploy hook` | 配置部署钩子 ⭐ |
-| `codesync release <version>` | 创建 Release ⭐ |
-| `codesync search <query>` | 代码搜索 ⭐ |
-| `codesync security license` | 许可证检测 ⭐ |
-| `codesync ci install` | 安装 CI/CD 配置 |
-| `codesync team init` | 初始化团队配置 |
-| `codesync cache --stats` | 查看缓存统计 |
-| `codesync config --list` | 查看配置 |
+| `codesync upload` | Upload the current project to a remote repository |
+| `codesync download <url>` | Clone a remote project locally |
+| `codesync update` | Update the current project |
+| `codesync ai commit` | Generate a commit message with AI |
+| `codesync ai annotate -f <file>` | Code annotation |
+| `codesync ai explain -f <file>` | Code explanation |
+| `codesync ai review -f <file>` | Code review |
+| `codesync agent-init` | Agent configuration wizard ⭐ |
+| `codesync agent start` | Start the agent ⭐ |
+| `codesync agent stop` | Stop the agent ⭐ |
+| `codesync agent status` | View the agent status ⭐ |
+| `codesync hook install` | Install a Pre-commit Hook ⭐ |
+| `codesync template use` | Use a commit template ⭐ |
+| `codesync dashboard` | Start the Web Dashboard ⭐ |
+| `codesync plugin install` | Install a plugin ⭐ |
+| `codesync deploy hook` | Configure a deployment hook ⭐ |
+| `codesync release <version>` | Create a Release ⭐ |
+| `codesync search <query>` | Code search ⭐ |
+| `codesync security license` | License detection ⭐ |
+| `codesync ci install` | Install the CI/CD configuration |
+| `codesync team init` | Initialize the team configuration |
+| `codesync cache --stats` | View cache statistics |
+| `codesync config --list` | View the configuration |
 
-**[查看完整功能文档 →](FEATURES_COMPLETE.md)**
+**[View the complete feature documentation →](FEATURES_COMPLETE.md)**
 
 ---
 
-## 🎯 使用场景
+## 🎯 Use Cases
 
-### 场景 1：Git 新手第一次上传项目
+### Scenario 1: A Git beginner uploads a project for the first time
 
 ```bash
 codesync init
 codesync upload --platform github --name my-first-project
-# 完成！自动创建仓库、自动提交、自动推送
+# Done! The repository is created, the commit is made, and the push happens automatically
 ```
 
-### 场景 2：完全自动化的开发流程 ⭐
+### Scenario 2: A fully automated development workflow ⭐
 
 ```bash
 codesync agent-init
 codesync agent start
-# 智能体自动监听文件变化并上传，无需手动操作
+# The agent automatically monitors file changes and uploads, with no manual operation required
 ```
 
-### 场景 3：快速下载并运行开源项目
+### Scenario 3: Quickly download and run an open-source project
 
 ```bash
 codesync download https://github.com/vercel/next.js --install
-# 自动克隆 + 自动安装依赖
+# Automatic clone + automatic dependency installation
 ```
 
-### 场景 4：AI 辅助理解代码
+### Scenario 4: Understanding code with AI assistance
 
 ```bash
 codesync ai explain -f src/utils/calc.js
-# AI 详细解释代码功能
+# AI explains the code's functionality in detail
 ```
 
-### 场景 5：团队协作，强制提交规范
+### Scenario 5: Team collaboration with enforced commit conventions
 
 ```bash
 codesync team init
 codesync team enforce
-# 自动校验提交信息格式
+# The commit message format is validated automatically
 ```
 
-### 场景 6：自动化 Release 流程 ⭐
+### Scenario 6: Automated Release workflow ⭐
 
 ```bash
 codesync release 2.0.0
-# 自动创建 Tag、生成 Notes、创建 Release
+# Tags, Notes, and Releases are created automatically
 ```
 
 ---
 
-## 📊 功能对比
+## 📊 Feature Comparison
 
-| 功能 | CodeSync | Git 命令 | commitizen | aicommits |
+| Feature | CodeSync | Git Commands | commitizen | aicommits |
 |------|----------|----------|------------|-----------|
-| 一键上传 | ✅ | ❌ | ❌ | ❌ |
-| 智能体自动上传 | ✅ | ❌ | ❌ | ❌ |
-| AI 提交信息 | ✅ | ❌ | 手动 | ✅ |
-| 代码注解/解释/审查 | ✅ | ❌ | ❌ | ❌ |
-| Pre-commit Hook 模板 | ✅ | 手动 | 部分 | ❌ |
-| 提交模板库 | ✅ | ❌ | 手动 | ❌ |
+| One-click upload | ✅ | ❌ | ❌ | ❌ |
+| Agent automatic upload | ✅ | ❌ | ❌ | ❌ |
+| AI commit message | ✅ | ❌ | Manual | ✅ |
+| Code annotation/explanation/review | ✅ | ❌ | ❌ | ❌ |
+| Pre-commit Hook templates | ✅ | Manual | Partial | ❌ |
+| Commit template library | ✅ | ❌ | Manual | ❌ |
 | Web Dashboard | ✅ | ❌ | ❌ | ❌ |
-| 插件系统 | ✅ | ❌ | ❌ | ❌ |
-| 自动化部署 | ✅ | ❌ | ❌ | ❌ |
-| Release 自动化 | ✅ | 手动 | ❌ | ❌ |
-| 代码搜索 | ✅ | grep | ❌ | ❌ |
-| 许可证检测 | ✅ | ❌ | ❌ | ❌ |
-| CI/CD 集成 | ✅ | 手动 | ❌ | ❌ |
-| VS Code 扩展 | ✅ | ❌ | ❌ | ❌ |
-| 桌面应用 | ✅ | ❌ | ❌ | ❌ |
+| Plugin system | ✅ | ❌ | ❌ | ❌ |
+| Automated deployment | ✅ | ❌ | ❌ | ❌ |
+| Release automation | ✅ | Manual | ❌ | ❌ |
+| Code search | ✅ | grep | ❌ | ❌ |
+| License detection | ✅ | ❌ | ❌ | ❌ |
+| CI/CD integration | ✅ | Manual | ❌ | ❌ |
+| VS Code extension | ✅ | ❌ | ❌ | ❌ |
+| Desktop application | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
-## 📚 文档
+## 📚 Documentation
 
-- [README.md](README.md) - 主文档
-- [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - 完整功能文档
-- [AGENT_GUIDE.md](AGENT_GUIDE.md) - 智能体使用指南
-- [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - 实施报告
-- [拓展.md](拓展.md) - 功能拓展计划
+- [README.md](README.md) - Main documentation
+- [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - Complete feature documentation
+- [AGENT_GUIDE.md](AGENT_GUIDE.md) - Agent usage guide
+- [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - Implementation report
+- [拓展.md](拓展.md) - Feature expansion plan
 
 ---
 
-## 🛠️ 开发
+## 🛠️ Development
 
 ```bash
-# 安装所有依赖
+# Install all dependencies
 npm install
 
-# 运行测试
+# Run the tests
 npm test
 
-# 全局链接 CLI
+# Link the CLI globally
 npm run link:cli
 
-# 启动桌面应用
+# Start the desktop application
 npm run install:desktop
 cd desktop && npm run dev
 ```
 
 ---
 
-## 🤝 贡献
+## 🤝 Contributing
 
-欢迎提交 Issue 和 Pull Request！
+Issues and Pull Requests are welcome!
 
 ---
 
-## 📄 许可证
+## 📄 License
 
 MIT License
 
@@ -419,7 +419,7 @@ MIT License
 
 <div align="center">
 
-**[⬆ 回到顶部](#-codesync-v20--智能-git--ai-代码助手)**
+**[⬆ Back to Top](#-codesync-v20--smart-git--ai-code-assistant)**
 
 Made with ❤️ by CodeSync Team
 

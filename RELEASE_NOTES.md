@@ -1,56 +1,56 @@
 # 🚀 CodeSync v2.0 Release Notes
 
-## 🎉 重大更新
+## 🎉 Highlights
 
-CodeSync v2.0 带来了 14 个新功能，从 17.6% 完成度提升到 82.4%！
+CodeSync v2.0 ships 14 new features, taking the completion rate from 17.6% to 82.4%!
 
 ---
 
-## ✨ 新功能
+## ✨ New Features
 
-### 🤖 智能代码上传助手（Agent）⭐ 核心功能
+### 🤖 Smart code upload assistant (Agent) ⭐ Core feature
 
-完全自动化的代码上传体验，无需手动执行 Git 命令。
+A fully automated code upload experience — no manual Git commands at all.
 
-**功能特性**:
-- 自动监听文件变化（基于 chokidar）
-- 4 种上传策略：智能、立即、批量、定时
-- AI 自动生成提交信息
-- 自动提交和推送到远程仓库
-- 配置文件支持（.codesync-agent.json）
-- 交互式配置向导
-- 统计信息展示
+**Highlights**:
+- Watches for file changes automatically (based on chokidar)
+- 4 upload strategies: smart, immediate, batch, scheduled
+- Generates commit messages with AI automatically
+- Commits and pushes to the remote repository automatically
+- Configuration file support (`.codesync-agent.json`)
+- Interactive setup wizard
+- Statistics display
 
-**使用方法**:
+**Usage**:
 ```bash
-# 配置向导
+# Setup wizard
 codesync agent-init
 
-# 启动智能体
+# Start the agent
 codesync agent start
 
-# 查看状态
+# Check the status
 codesync agent status
 ```
 
-**详细文档**: [AGENT_GUIDE.md](AGENT_GUIDE.md)
+**Detailed documentation**: [AGENT_GUIDE.md](AGENT_GUIDE.md)
 
 ---
 
-### 🎣 Pre-commit Hook 模板
+### 🎣 Pre-commit hook templates
 
-丰富的预提交钩子模板，支持 ESLint、Prettier、TypeScript 等。
+A rich set of pre-commit hook templates, supporting ESLint, Prettier, TypeScript and more.
 
-**可用模板**:
-- `eslint` - ESLint 代码检查
-- `stylelint` - 样式检查
-- `typescript` - TypeScript 类型检查
-- `prettier` - 代码格式化
-- `test` - 运行测试
-- `all` - 综合检查
-- `custom` - 自定义钩子
+**Available templates**:
+- `eslint` - ESLint code checks
+- `stylelint` - style checks
+- `typescript` - TypeScript type checking
+- `prettier` - code formatting
+- `test` - run the tests
+- `all` - combined checks
+- `custom` - custom hook
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync hook install --template eslint
 codesync hook install --template all --force
@@ -58,21 +58,21 @@ codesync hook install --template all --force
 
 ---
 
-### 📝 提交模板库
+### 📝 Commit template library
 
-8 个内置提交模板 + 自定义模板支持。
+8 built-in commit templates plus support for custom templates.
 
-**内置模板**:
-- `bug-fix` - Bug 修复
-- `feature` - 新功能
-- `refactor` - 代码重构
-- `documentation` - 文档更新
-- `breaking-change` - 破坏性变更
-- `performance` - 性能优化
-- `test` - 测试相关
-- `chore` - 杂项任务
+**Built-in templates**:
+- `bug-fix` - bug fix
+- `feature` - new feature
+- `refactor` - code refactoring
+- `documentation` - documentation update
+- `breaking-change` - breaking change
+- `performance` - performance optimization
+- `test` - testing related
+- `chore` - miscellaneous tasks
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync template use --name feature
 codesync template add --name my-template --template "..."
@@ -80,37 +80,37 @@ codesync template add --name my-template --template "..."
 
 ---
 
-### 📊 Web Dashboard
+### 📊 Web dashboard
 
-项目统计和可视化 Web 界面。
+A web UI with project statistics and visualization.
 
-**功能**:
-- 项目统计仪表板
-- 提交历史可视化
-- 贡献者统计
-- 分支列表
-- 文件变更统计
-- RESTful API 端点
+**Features**:
+- Project statistics dashboard
+- Commit history visualization
+- Contributor statistics
+- Branch list
+- File change statistics
+- RESTful API endpoints
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync dashboard
-# 访问 http://localhost:3001
+# Open http://localhost:3001
 ```
 
 ---
 
-### 🔌 插件系统
+### 🔌 Plugin system
 
-可扩展的插件架构，支持社区贡献。
+An extensible plugin architecture that welcomes community contributions.
 
-**插件类型**:
-- `ai-provider` - AI 服务提供商
-- `platform` - Git 平台适配器
-- `pre-commit-hook` - 提交前钩子
-- `post-commit-hook` - 提交后钩子
+**Plugin types**:
+- `ai-provider` - AI service provider
+- `platform` - Git platform adapter
+- `pre-commit-hook` - pre-commit hook
+- `post-commit-hook` - post-commit hook
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync plugin install --name my-plugin --type ai-provider --path ./plugins/my-plugin.js
 codesync plugin list
@@ -118,17 +118,17 @@ codesync plugin list
 
 ---
 
-### 🚀 自动化部署
+### 🚀 Automated deployment
 
-支持多种部署平台的自动化部署。
+Automated deployment to multiple platforms.
 
-**支持平台**:
-- `vercel` - Vercel 部署
-- `netlify` - Netlify 部署
-- `docker` - Docker 镜像构建
-- `npm` - NPM 包发布
+**Supported platforms**:
+- `vercel` - Vercel deployment
+- `netlify` - Netlify deployment
+- `docker` - Docker image build
+- `npm` - NPM package publishing
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync deploy hook --platform docker
 codesync deploy list
@@ -136,17 +136,17 @@ codesync deploy list
 
 ---
 
-### 📦 Release 自动化
+### 📦 Release automation
 
-一键创建 Release，自动完成所有步骤。
+Create a release with one command — every step is automated.
 
-**功能**:
-- 自动创建 Git Tag
-- 自动推送 Tag 到远程
-- 自动生成 Release Notes
-- 自动创建 GitHub Release
+**Features**:
+- Automatically creates the Git tag
+- Automatically pushes the tag to the remote
+- Automatically generates the release notes
+- Automatically creates the GitHub release
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync release 1.0.0
 codesync release 1.0.0-beta.1 --prerelease
@@ -155,17 +155,17 @@ codesync release 1.0.0 --draft
 
 ---
 
-### 🔍 代码搜索
+### 🔍 Code search
 
-强大的代码搜索功能。
+Powerful code search.
 
-**功能**:
-- 文本搜索（基于 ripgrep）
-- 语义搜索（基于关键词）
-- 上下文显示
-- 结果排序
+**Features**:
+- Text search (based on ripgrep)
+- Semantic search (based on keywords)
+- Context display
+- Result ranking
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync search "function login"
 codesync search "api authentication" --type semantic
@@ -173,145 +173,145 @@ codesync search "api authentication" --type semantic
 
 ---
 
-### 🔒 许可证合规检测
+### 🔒 License compliance checks
 
-依赖许可证扫描和合规性检查。
+Dependency license scanning and compliance checks.
 
-**功能**:
-- 依赖许可证扫描
-- 合规性检查（MIT, Apache-2.0, BSD, ISC 等）
-- 许可证报告生成
-- JSON 报告导出
+**Features**:
+- Dependency license scanning
+- Compliance checks (MIT, Apache-2.0, BSD, ISC, etc.)
+- License report generation
+- JSON report export
 
-**使用方法**:
+**Usage**:
 ```bash
 codesync security license
 ```
 
 ---
 
-### 🎨 桌面应用 UI/UX 改进
+### 🎨 Desktop app UI/UX improvements
 
-新增 3 个页面：PR 管理、Issue 跟踪、性能监控。
+Three new pages: PR management, issue tracking and performance monitoring.
 
-**新增功能**:
-- PR 管理页面（Pull Request 列表、状态查看）
-- Issue 跟踪页面（Issue 列表、优先级管理）
-- 性能监控页面（健康度评分、优化建议）
-- 现代化卡片设计
-- 状态标识
-
----
-
-## 🔧 改进
-
-### 安全检测增强
-
-- 新增许可证合规检测功能
-- 改进敏感信息扫描算法
-
-### 文档完善
-
-- 新增 [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - 完整功能文档
-- 新增 [AGENT_GUIDE.md](AGENT_GUIDE.md) - 智能体使用指南
-- 更新 [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - 实施报告
+**New features**:
+- PR management page (pull request list, status view)
+- Issue tracking page (issue list, priority management)
+- Performance monitoring page (health score, optimization suggestions)
+- Modern card design
+- Status indicators
 
 ---
 
-## 📋 新增命令
+## 🔧 Improvements
 
-| 命令 | 功能 |
+### Enhanced security checks
+
+- Added the license compliance check
+- Improved the secret scanning algorithm
+
+### Better documentation
+
+- Added [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - the complete feature documentation
+- Added [AGENT_GUIDE.md](AGENT_GUIDE.md) - the agent usage guide
+- Updated [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - the implementation report
+
+---
+
+## 📋 New commands
+
+| Command | Description |
 |------|------|
-| `codesync agent-init` | 智能体配置向导 |
-| `codesync agent start` | 启动智能体 |
-| `codesync agent stop` | 停止智能体 |
-| `codesync agent status` | 查看智能体状态 |
-| `codesync agent config` | 智能体配置说明 |
-| `codesync hook install` | 安装 Pre-commit Hook |
-| `codesync hook uninstall` | 卸载 Pre-commit Hook |
-| `codesync hook list` | 列出可用 Hook 模板 |
-| `codesync template add` | 添加自定义模板 |
-| `codesync template list` | 列出所有模板 |
-| `codesync template use` | 使用模板生成提交信息 |
-| `codesync template remove` | 删除自定义模板 |
-| `codesync template show` | 查看模板详情 |
-| `codesync dashboard` | 启动 Web Dashboard |
-| `codesync plugin install` | 安装插件 |
-| `codesync plugin uninstall` | 卸载插件 |
-| `codesync plugin list` | 列出已安装插件 |
-| `codesync plugin load` | 加载插件 |
-| `codesync deploy hook` | 配置部署钩子 |
-| `codesync deploy list` | 列出支持的部署平台 |
-| `codesync release <version>` | 创建 Release |
-| `codesync search <query>` | 代码搜索 |
-| `codesync security license` | 许可证合规检测 |
+| `codesync agent-init` | Agent setup wizard |
+| `codesync agent start` | Start the agent |
+| `codesync agent stop` | Stop the agent |
+| `codesync agent status` | Show the agent status |
+| `codesync agent config` | Show the agent configuration reference |
+| `codesync hook install` | Install a pre-commit hook |
+| `codesync hook uninstall` | Remove the pre-commit hook |
+| `codesync hook list` | List the available hook templates |
+| `codesync template add` | Add a custom template |
+| `codesync template list` | List all templates |
+| `codesync template use` | Generate a commit message from a template |
+| `codesync template remove` | Remove a custom template |
+| `codesync template show` | Show the template details |
+| `codesync dashboard` | Start the web dashboard |
+| `codesync plugin install` | Install a plugin |
+| `codesync plugin uninstall` | Uninstall a plugin |
+| `codesync plugin list` | List the installed plugins |
+| `codesync plugin load` | Load a plugin |
+| `codesync deploy hook` | Configure the deployment hook |
+| `codesync deploy list` | List the supported deployment platforms |
+| `codesync release <version>` | Create a release |
+| `codesync search <query>` | Search the code |
+| `codesync security license` | License compliance check |
 
 ---
 
-## 📊 完成度统计
+## 📊 Completion statistics
 
-| 类别 | 计划功能数 | 已完成 | 完成率 |
+| Category | Planned | Done | Completion |
 |------|-----------|--------|--------|
-| 高优先级 | 6 | 6 | 100% |
-| 中优先级 | 11 | 8 | 72.7% |
-| **总计** | **17** | **14** | **82.4%** |
+| High priority | 6 | 6 | 100% |
+| Medium priority | 11 | 8 | 72.7% |
+| **Total** | **17** | **14** | **82.4%** |
 
-从 v1.0 的 17.6% 提升到 v2.0 的 **82.4%**！
+Up from 17.6% in v1.0 to **82.4%** in v2.0!
 
 ---
 
-## 🛠️ 技术栈
+## 🛠️ Tech stack
 
-- **核心**: Node.js + ES Modules
-- **文件监听**: chokidar
+- **Core**: Node.js + ES Modules
+- **File watching**: chokidar
 - **CLI**: Commander.js
 - **UI**: Picocolors + Ora
-- **交互**: Prompts
+- **Prompts**: Prompts
 - **Web**: Express.js
-- **桌面**: Electron
+- **Desktop**: Electron
 
 ---
 
-## 📚 文档
+## 📚 Documentation
 
-- [README.md](README.md) - 主文档
-- [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - 完整功能文档
-- [AGENT_GUIDE.md](AGENT_GUIDE.md) - 智能体使用指南
-- [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - 实施报告
-- [拓展.md](拓展.md) - 功能拓展计划
-
----
-
-## 🎯 下一步计划
-
-### Phase 3: 长期规划（创新功能）
-
-1. **多仓库管理** - GUI 仓库管理器、批量操作
-2. **实时协作** - 类似 Google Docs 的实时编辑
-3. **数据分析与开发者画像** - 提交习惯分析、项目洞察
-4. **教育与培训** - 交互式 Git 教程、学习路径
+- [README.md](README.md) - main documentation
+- [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - the complete feature documentation
+- [AGENT_GUIDE.md](AGENT_GUIDE.md) - the agent usage guide
+- [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - the implementation report
+- [EXTENSIONS.md](EXTENSIONS.md) - the feature extension roadmap
 
 ---
 
-## 🤝 贡献
+## 🎯 Next steps
 
-欢迎提交 Issue 和 Pull Request！
+### Phase 3: long-term plans (innovative features)
+
+1. **Multi-repository management** - a GUI repository manager and batch operations
+2. **Real-time collaboration** - Google Docs style real-time editing
+3. **Data analysis and developer profiles** - commit habit analysis and project insights
+4. **Education and training** - an interactive Git tutorial and learning paths
 
 ---
 
-## 📄 许可证
+## 🤝 Contributing
+
+Issues and pull requests are welcome!
+
+---
+
+## 📄 License
 
 MIT License
 
 ---
 
-## 💡 反馈
+## 💡 Feedback
 
-如有问题或建议，请：
-- 提交 [GitHub Issue](https://github.com/your-org/git-commit-ai/issues)
-- 查看 [文档](https://github.com/your-org/git-commit-ai/wiki)
-- 加入 [Discord](https://discord.gg/codesync)
+If you have a question or a suggestion:
+- Open a [GitHub issue](https://github.com/lb2786738061-rgb/git-commit-ai/issues)
+- Read the [documentation](https://github.com/lb2786738061-rgb/git-commit-ai)
+- Join the community chat (Discord)
 
 ---
 
-**[⬆ 回到顶部](#-codesync-v20-release-notes)**
+**[⬆ Back to top](#-codesync-v20-release-notes)**

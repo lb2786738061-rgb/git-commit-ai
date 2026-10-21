@@ -1,7 +1,7 @@
 {
   "name": "codesync-vscode",
   "displayName": "CodeSync - AI Git Assistant",
-  "description": "在 VS Code 里一键上传代码到 GitHub/Gitee/GitLab，AI 生成提交信息、注解、解释与审查。与 CLI、桌面版共用同一套核心逻辑与配置。",
+  "description": "Upload code to GitHub/Gitee/GitLab in one click from VS Code, with AI-generated commit messages, annotation, explanation and review. Shares the same core logic and configuration as the CLI and the desktop app.",
   "version": "1.0.0",
   "publisher": "lb2786738061-rgb",
   "license": "MIT",

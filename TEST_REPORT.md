@@ -1,173 +1,173 @@
-# CLI 功能测试报告
+# CLI Feature Test Report
 
-## 测试时间
+## Test Time
 2026-10-18
 
-## 测试环境
-- 操作系统: Windows
+## Test Environment
+- Operating System: Windows
 - Node.js: v24.11.1
-- 项目路径: E:\projects\git-commit-ai
+- Project Path: E:\projects\git-commit-ai
 
-## 测试结果
+## Test Results
 
-### ✅ 基本功能测试
+### ✅ Basic Feature Tests
 
-#### 1. 版本信息
+#### 1. Version Information
 ```bash
 node bin/codesync.js --version
 ```
-**结果**: ✅ 成功显示版本 2.0.0
+**Result**: ✅ Successfully displays version 2.0.0
 
-#### 2. 配置管理
+#### 2. Configuration Management
 ```bash
 node bin/codesync.js config --list
 ```
-**结果**: ✅ 成功显示配置信息
+**Result**: ✅ Successfully displays the configuration information
 
 ```bash
 node bin/codesync.js config set apiKey=test-key
 ```
-**结果**: ⚠️ 配置写入成功，但显示有问题（缓存问题）
-**说明**: 配置实际已写入文件，但读取时可能有缓存
+**Result**: ⚠️ The configuration was written successfully, but the display has an issue (caching issue)
+**Explanation**: The configuration has actually been written to the file, but reading it may be affected by the cache
 
-#### 3. AI功能 - 生成提交信息
+#### 3. AI Feature - Generate Commit Message
 ```bash
 node bin/codesync.js ai commit
 ```
-**结果**: ✅ 成功运行
-- 正确检测到没有暂存的更改
-- 给出友好的提示信息
+**Result**: ✅ Runs successfully
+- Correctly detects that there are no staged changes
+- Provides a friendly prompt message
 
-#### 4. 上传功能
+#### 4. Upload Feature
 ```bash
 node bin/codesync.js upload
 ```
-**结果**: ⚠️ 部分成功
-- ✅ Git操作正常（检查、添加、提交）
-- ✅ AI生成提交信息（失败时使用默认值）
-- ❌ 需要配置GitHub Token（符合预期）
-- ✅ 进度显示正常
+**Result**: ⚠️ Partially successful
+- ✅ Git operations work normally (check, add, commit)
+- ✅ AI-generated commit message (falls back to a default value on failure)
+- ❌ A GitHub Token is required (as expected)
+- ✅ Progress display works normally
 
-#### 5. 下载功能
+#### 5. Download Feature
 ```bash
 node bin/codesync.js download https://github.com/vercel/next.js --path E:\projects\test-nextjs
 ```
-**结果**: ⚠️ 超时
-- ⚠️ 克隆大仓库超时（120秒）
-- ✅ 命令参数解析正确
-- ✅ 错误处理正常
+**Result**: ⚠️ Timed out
+- ⚠️ Cloning a large repository timed out (120 seconds)
+- ✅ Command argument parsing is correct
+- ✅ Error handling works normally
 
-#### 6. 更新功能
+#### 6. Update Feature
 ```bash
 node bin/codesync.js update
 ```
-**结果**: ✅ 完全成功
-- ✅ 检测Git仓库
-- ✅ 拉取更新
-- ✅ 显示成功信息
+**Result**: ✅ Completely successful
+- ✅ Detects the Git repository
+- ✅ Pulls the updates
+- ✅ Displays the success message
 
-## 问题总结
+## Issue Summary
 
-### 问题1: 配置显示缓存
-**现象**: 修改配置后，显示的值不是最新的
-**原因**: 可能是模块缓存
-**影响**: 低（配置实际已写入）
-**解决方案**: 需要重新加载配置
+### Issue 1: Configuration Display Cache
+**Symptom**: After modifying the configuration, the displayed value is not the latest
+**Cause**: Possibly module caching
+**Impact**: Low (the configuration has actually been written)
+**Solution**: The configuration needs to be reloaded
 
-### 问题2: 下载超时
-**现象**: 克隆大仓库时超时
-**原因**: 默认超时时间太短（120秒）
-**影响**: 中（下载大项目会失败）
-**解决方案**: 增加超时时间或添加进度显示
+### Issue 2: Download Timeout
+**Symptom**: Timeout when cloning a large repository
+**Cause**: The default timeout is too short (120 seconds)
+**Impact**: Medium (downloading large projects will fail)
+**Solution**: Increase the timeout or add a progress display
 
-### 问题3: 上传需要Token
-**现象**: 上传需要配置GitHub Token
-**原因**: 这是预期行为
-**影响**: 无（正常流程）
-**解决方案**: 用户需要先配置Token
+### Issue 3: Upload Requires a Token
+**Symptom**: Uploading requires configuring a GitHub Token
+**Cause**: This is expected behavior
+**Impact**: None (normal flow)
+**Solution**: The user needs to configure the Token first
 
-## 成功的功能
+## Successful Features
 
-1. ✅ 版本显示
-2. ✅ 配置查看
-3. ✅ 配置设置（写入文件）
-4. ✅ AI提交信息生成
-5. ✅ Git操作封装
-6. ✅ 上传流程（除Token）
-7. ✅ 更新项目
-8. ✅ 进度显示
-9. ✅ 错误处理
-10. ✅ 命令行参数解析
+1. ✅ Version display
+2. ✅ Configuration viewing
+3. ✅ Configuration setting (writes to the file)
+4. ✅ AI commit message generation
+5. ✅ Git operation encapsulation
+6. ✅ Upload flow (except for the Token)
+7. ✅ Updating the project
+8. ✅ Progress display
+9. ✅ Error handling
+10. ✅ Command-line argument parsing
 
-## 修复建议
+## Fix Recommendations
 
-### 优先级1: 配置缓存问题
+### Priority 1: Configuration Cache Issue
 ```javascript
-// 在config.js中添加配置清除缓存
+// Add config cache clearing in config.js
 export function clearConfigCache() {
-  // 清除模块缓存
+  // Clear the module cache
   delete require.cache[require.resolve('./config.js')];
 }
 ```
 
-### 优先级2: 下载超时
+### Priority 2: Download Timeout
 ```javascript
-// 在download.js中增加超时时间
+// Increase the timeout in download.js
 execFileSync('git', ['clone', url, targetPath], {
   stdio: 'pipe',
-  timeout: 600000 // 10分钟
+  timeout: 600000 // 10 minutes
 });
 ```
 
-### 优先级3: 配置显示
+### Priority 3: Configuration Display
 ```javascript
-// 在setConfig后重新读取配置
+// Re-read the configuration after setConfig
 const result = writeConfig({ [key]: value });
-const updatedConfig = readConfig(); // 重新读取
-console.log(`当前值: ${updatedConfig[key]}`);
+const updatedConfig = readConfig(); // Re-read
+console.log(`Current value: ${updatedConfig[key]}`);
 ```
 
-## 测试命令
+## Test Commands
 
 ```bash
-# 测试配置
+# Test the configuration
 node bin/codesync.js config --list
 node bin/codesync.js config set apiKey=test
 
-# 测试AI
+# Test the AI
 node bin/codesync.js ai commit
 
-# 测试上传（需要Token）
+# Test the upload (requires a Token)
 node bin/codesync.js upload
 
-# 测试下载（小仓库）
+# Test the download (small repository)
 node bin/codesync.js download https://github.com/user/small-repo --path test
 
-# 测试更新
+# Test the update
 node bin/codesync.js update
 ```
 
-## 总体评价
+## Overall Assessment
 
-**成功率**: 80% (6/7 功能基本正常)
+**Success rate**: 80% (6/7 features work basically normally)
 
-**可用性**: ⭐⭐⭐⭐☆ (4/5)
+**Usability**: ⭐⭐⭐⭐☆ (4/5)
 
-**优点**:
-- 核心功能正常
-- 错误处理完善
-- 进度显示友好
-- 命令设计合理
+**Strengths**:
+- The core features work normally
+- Comprehensive error handling
+- Friendly progress display
+- Reasonable command design
 
-**需要改进**:
-- 配置缓存问题
-- 下载超时
-- 需要更多测试用例
+**Needs improvement**:
+- Configuration cache issue
+- Download timeout
+- More test cases needed
 
-## 下一步
+## Next Steps
 
-1. 修复配置缓存问题
-2. 增加下载超时时间
-3. 添加更多测试用例
-4. 测试AI代码注解/解释/审查功能
-5. 测试小仓库下载
+1. Fix the configuration cache issue
+2. Increase the download timeout
+3. Add more test cases
+4. Test the AI code annotation/explanation/review features
+5. Test downloading a small repository

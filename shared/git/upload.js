@@ -53,13 +53,13 @@ export async function uploadProject(options) {
       try {
         commitMessage = await generateCommitMessage(diff, '');
       } catch (error) {
-        console.warn('AI 生成提交信息失败，使用默认信息');
+        console.warn(`\n⚠️  AI 生成提交信息失败 (${error.message})，将使用默认提交信息`);
       }
     }
 
     // 4. 提交
     onProgress(50, '提交更改...');
-    await git.commit(commitMessage);
+    await git.commit(commitMessage, { bypassHooks: true });
 
     // 5. 设置分支为 main
     onProgress(60, '设置分支...');

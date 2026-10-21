@@ -66,14 +66,11 @@ export async function generateCommitMessage(diff, detectedScope = '') {
   // 智能选择模型
   const selectedModel = selectSmartModel(diff, config);
 
-  // Normalise ending slash of apiBase
-  let apiBase = config.apiBase.trim();
-  if (apiBase.endsWith('/')) {
-    apiBase = apiBase.slice(0, -1);
-  }
-  const url = `${apiBase}/chat/completions`;
+  // 规范化 apiBase 地址，避免用户填写了完整路径后重复拼接 /chat/completions
+  let apiBase = (config.apiBase || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+  const url = apiBase.endsWith('/chat/completions') ? apiBase : `${apiBase}/chat/completions`;
 
-  try {
+  async function doRequest(modelToUse) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -81,15 +78,14 @@ export async function generateCommitMessage(diff, detectedScope = '') {
         'Authorization': `Bearer ${config.apiKey}`
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: modelToUse,
         messages: [
           { role: 'system', content: getSystemPrompt(config.convention, config.language) },
-          { role: 'user', content: createUserPrompt(diff, detectedScope, config.convention) }
+          { role: 'user', content: createUserPrompt(diff.length > 25000 ? diff.slice(0, 25000) + '\n...[diff truncated for length]' : diff, detectedScope, config.convention) }
         ],
         temperature: 0.2
       })
     });
-
 
     if (!response.ok) {
       let errorBody = '';
@@ -104,7 +100,21 @@ export async function generateCommitMessage(diff, detectedScope = '') {
       throw new Error('Invalid response structure received from the API.');
     }
 
-    const result = cleanResponse(data.choices[0].message.content);
+    return cleanResponse(data.choices[0].message.content);
+  }
+
+  try {
+    let result;
+    try {
+      result = await doRequest(selectedModel);
+    } catch (primaryError) {
+      // 如果智能选择的模型调用失败，且与默认配置的主模型不一致，尝试降级回退到默认主模型
+      if (config.model && selectedModel !== config.model) {
+        result = await doRequest(config.model);
+      } else {
+        throw primaryError;
+      }
+    }
 
     // 存入缓存
     setCache(cacheKey, result);

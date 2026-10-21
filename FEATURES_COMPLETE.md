@@ -1,525 +1,525 @@
-# 🎉 CodeSync v2.0 功能全览
+# 🎉 CodeSync v2.0 Feature Overview
 
-## 📦 什么是 CodeSync？
+## 📦 What is CodeSync?
 
-CodeSync 是一个强大的 Git 操作 + AI 代码助手工具，让不会 Git 的人也能轻松管理代码，AI 辅助提升开发效率。
+CodeSync is a powerful Git operations + AI code assistant that lets anyone manage their code without knowing Git, with AI assistance to boost development efficiency.
 
-**核心价值**：
-- ✅ 一键上传/下载，无需记忆 Git 命令
-- ✅ AI 自动生成规范的提交信息
-- ✅ 智能代码助手（注解、解释、审查）
-- ✅ 智能体自动上传，完全自动化
-- ✅ 团队协作和 CI/CD 集成
+**Core value**:
+- ✅ One-click upload/download — no need to memorize Git commands
+- ✅ AI generates well-formed commit messages automatically
+- ✅ Smart code assistant (annotation, explanation, review)
+- ✅ The agent uploads automatically — fully hands-off
+- ✅ Team collaboration and CI/CD integration
 
 ---
 
-## 🚀 核心功能
+## 🚀 Core Features
 
-### 1. Git 操作极简化
+### 1. Simplified Git operations
 
-#### 一键上传
+#### One-click upload
 ```bash
-# 上传当前项目到 GitHub
+# Upload the current project to GitHub
 codesync upload --platform github --name my-project
 
-# 上传到私有仓库
+# Upload to a private repository
 codesync upload --platform github --name my-project --private
 
-# 上传到 Gitee/GitLab
+# Upload to Gitee / GitLab
 codesync upload --platform gitee --name my-project
 codesync upload --platform gitlab --name my-project
 ```
 
-#### 一键下载
+#### One-click download
 ```bash
-# 下载并自动安装依赖
+# Download and install the dependencies automatically
 codesync download https://github.com/user/repo.git --install
 
-# 下载到指定目录
+# Download to a specific directory
 codesync download https://github.com/user/repo.git --dir ./my-folder
 ```
 
-#### 智能更新
+#### Smart update
 ```bash
-# 自动检测变更、生成提交信息、推送
+# Detect changes, generate the commit message and push
 codesync update
 ```
 
-#### 版本回退
+#### Version rollback
 ```bash
-# 交互式选择提交记录，安全回退
+# Pick a commit interactively and roll back safely
 codesync git revert
 ```
 
 ---
 
-### 2. AI 代码助手
+### 2. AI code assistant
 
-#### 智能提交信息生成
+#### Smart commit message generation
 ```bash
-# 标准模式（交互式确认）
+# Standard mode (interactive confirmation)
 codesync ai commit
 
-# 快速模式（直接提交）
+# Fast mode (commit immediately)
 codesync ai commit --yes
 
-# 指定规范
+# Choose a convention
 codesync ai commit --convention gitmoji
 
-# 指定语言
+# Choose a language
 codesync ai commit --language en
 ```
 
-#### 代码注解
+#### Code annotation
 ```bash
-# 为代码文件生成详细中文注释
+# Generate detailed comments for a code file
 codesync ai annotate -f src/app.js
 ```
 
-#### 代码解释
+#### Code explanation
 ```bash
-# 详细解释代码功能、参数、执行流程
+# Explain what the code does, its parameters and the execution flow
 codesync ai explain -f src/app.js
 ```
 
-#### 代码审查
+#### Code review
 ```bash
-# 从质量、潜在 bug、性能、安全性角度全面审查
+# A full review covering quality, potential bugs, performance and security
 codesync ai review -f src/app.js
 ```
 
-#### 自动生成 Changelog
+#### Automatic changelog
 ```bash
-# 分析两个版本标签之间的所有提交，自动生成更新日志
+# Analyze every commit between two tags and generate the changelog
 codesync git changelog --from=v1.0.0 --to=v1.1.0
 ```
 
 ---
 
-### 3. 🤖 智能代码上传助手（Agent）⭐ 新功能
+### 3. 🤖 Smart code upload assistant (Agent) ⭐ New
 
-**完全自动化的代码上传体验！**
+**A fully automated code upload experience!**
 
-#### 配置向导（首次使用）
+#### Setup wizard (first run)
 ```bash
 codesync agent-init
 ```
 
-配置向导会询问：
-- 上传策略（智能/立即/批量/定时）
-- 批量上传阈值
-- 定时上传间隔
-- 是否使用 AI 生成提交信息
-- 提交规范和语言
-- 自动提交/推送
-- 是否需要确认
+The wizard asks:
+- The upload strategy (smart / immediate / batch / scheduled)
+- The batch upload threshold
+- The scheduled upload interval
+- Whether to use AI to generate the commit message
+- The commit convention and language
+- Auto commit / auto push
+- Whether a confirmation is required
 
-#### 启动智能体
+#### Start the agent
 ```bash
 codesync agent start
 ```
 
-智能体会：
-- 自动监听文件变化
-- 智能生成提交信息
-- 自动提交和推送
-- 完全无需手动操作
+The agent will:
+- Watch for file changes automatically
+- Generate commit messages intelligently
+- Commit and push automatically
+- Require no manual interaction at all
 
-#### 查看状态
+#### Check the status
 ```bash
 codesync agent status
 ```
 
-#### 停止智能体
+#### Stop the agent
 ```bash
 codesync agent stop
 ```
 
-#### 高级选项
+#### Advanced options
 ```bash
-# 指定上传策略
+# Choose the upload strategy
 codesync agent start --strategy smart
 codesync agent start --strategy immediate
 codesync agent start --strategy batch --batch-size 10
 codesync agent start --strategy scheduled --interval 120
 
-# 禁用 AI 生成
+# Disable AI generation
 codesync agent start --no-ai
 
-# 跳过确认提示
+# Skip the confirmation prompt
 codesync agent start --yes
 
-# 禁用自动推送
+# Disable auto push
 codesync agent start --no-push
 ```
 
-**详细文档**: [AGENT_GUIDE.md](AGENT_GUIDE.md)
+**Detailed documentation**: [AGENT_GUIDE.md](AGENT_GUIDE.md)
 
 ---
 
-### 4. AI 代码审查 Bot
+### 4. AI code review bot
 
-#### 安装 Bot
+#### Install the bot
 ```bash
 codesync review-bot install
 ```
 
-#### 启动 Bot
+#### Start the bot
 ```bash
 codesync review-bot start
 ```
 
-Bot 会：
-- 监听 GitHub/GitLab Webhook
-- 自动分析 PR/MR diff
-- 生成 AI 审查评论
-- 支持自定义审查规则
+The bot will:
+- Listen to GitHub / GitLab webhooks
+- Analyze the PR / MR diff automatically
+- Generate an AI review comment
+- Support custom review rules
 
 ---
 
-### 5. VS Code 扩展
+### 5. VS Code extension
 
-#### 安装
+#### Install
 ```bash
 cd vscode-extension
 npm install
 npm run compile
 ```
 
-#### 在 VS Code 中使用
-1. 打开 CodeSync 侧边栏
-2. 查看暂存区更改
-3. 点击 "Generate Commit Message" 生成提交信息
-4. 右键选中文本，选择 AI 功能
+#### Use it in VS Code
+1. Open the CodeSync sidebar
+2. Inspect the staged changes
+3. Click "Generate Commit Message" to create a commit message
+4. Right-click selected text and pick an AI command
 
 ---
 
-### 6. 团队协作
+### 6. Team collaboration
 
-#### 初始化团队配置
+#### Initialize the team configuration
 ```bash
 codesync team init
 ```
 
-#### 安装强制规范钩子
+#### Install the enforcing hooks
 ```bash
 codesync team enforce
 ```
 
-团队成员提交时会自动校验提交信息格式。
+Team members are then validated automatically when they commit.
 
 ---
 
-### 7. Pre-commit Hook 模板 ⭐ 新功能
+### 7. Pre-commit hook templates ⭐ New
 
-#### 列出可用模板
+#### List the available templates
 ```bash
 codesync hook list
 ```
 
-可用模板：
-- `eslint` - ESLint 代码检查
-- `stylelint` - 样式检查
-- `typescript` - TypeScript 类型检查
-- `prettier` - 代码格式化
-- `test` - 运行测试
-- `all` - 综合检查
-- `custom` - 自定义钩子
+Available templates:
+- `eslint` - ESLint code checks
+- `stylelint` - style checks
+- `typescript` - TypeScript type checking
+- `prettier` - code formatting
+- `test` - run the tests
+- `all` - combined checks
+- `custom` - custom hook
 
-#### 安装 Hook
+#### Install a hook
 ```bash
-# 安装 ESLint Hook
+# Install the ESLint hook
 codesync hook install --template eslint
 
-# 安装综合检查 Hook
+# Install the combined check hook
 codesync hook install --template all --force
 ```
 
-#### 卸载 Hook
+#### Remove the hook
 ```bash
 codesync hook uninstall
 ```
 
 ---
 
-### 8. 提交模板库 ⭐ 新功能
+### 8. Commit template library ⭐ New
 
-#### 列出所有模板
+#### List all templates
 ```bash
 codesync template list
 ```
 
-内置模板：
-- `bug-fix` - Bug 修复
-- `feature` - 新功能
-- `refactor` - 代码重构
-- `documentation` - 文档更新
-- `breaking-change` - 破坏性变更
-- `performance` - 性能优化
-- `test` - 测试相关
-- `chore` - 杂项任务
+Built-in templates:
+- `bug-fix` - bug fix
+- `feature` - new feature
+- `refactor` - code refactoring
+- `documentation` - documentation update
+- `breaking-change` - breaking change
+- `performance` - performance optimization
+- `test` - testing related
+- `chore` - miscellaneous tasks
 
-#### 使用模板
+#### Use a template
 ```bash
 codesync template use --name feature
 ```
 
-#### 查看模板详情
+#### Show the template details
 ```bash
 codesync template show --name bug-fix
 ```
 
-#### 添加自定义模板
+#### Add a custom template
 ```bash
 codesync template add --name my-template --template "..." --description "..."
 ```
 
-#### 删除自定义模板
+#### Remove a custom template
 ```bash
 codesync template remove --name my-template
 ```
 
 ---
 
-### 9. Web Dashboard ⭐ 新功能
+### 9. Web dashboard ⭐ New
 
-#### 启动 Dashboard
+#### Start the dashboard
 ```bash
 codesync dashboard
 ```
 
-#### 指定端口
+#### Choose the port
 ```bash
 codesync dashboard --port 3001
 ```
 
-Dashboard 提供：
-- 项目统计仪表板
-- 提交历史可视化
-- 贡献者统计
-- 分支列表
-- 文件变更统计
+The dashboard provides:
+- Project statistics
+- Commit history visualization
+- Contributor statistics
+- Branch list
+- File change statistics
 
-访问: http://localhost:3001
+Open: http://localhost:3001
 
 ---
 
-### 10. 插件系统 ⭐ 新功能
+### 10. Plugin system ⭐ New
 
-#### 列出已安装插件
+#### List the installed plugins
 ```bash
 codesync plugin list
 ```
 
-#### 安装插件
+#### Install a plugin
 ```bash
 codesync plugin install --name my-plugin --type ai-provider --path ./plugins/my-plugin.js
 ```
 
-插件类型：
-- `ai-provider` - AI 服务提供商
-- `platform` - Git 平台适配器
-- `pre-commit-hook` - 提交前钩子
-- `post-commit-hook` - 提交后钩子
+Plugin types:
+- `ai-provider` - AI service provider
+- `platform` - Git platform adapter
+- `pre-commit-hook` - pre-commit hook
+- `post-commit-hook` - post-commit hook
 
-#### 卸载插件
+#### Remove a plugin
 ```bash
 codesync plugin uninstall --name my-plugin
 ```
 
-#### 加载插件
+#### Load a plugin
 ```bash
 codesync plugin load --path ./plugins/custom-plugin.js
 ```
 
 ---
 
-### 11. 自动化部署 ⭐ 新功能
+### 11. Automated deployment ⭐ New
 
-#### 列出支持的部署平台
+#### List the supported deployment platforms
 ```bash
 codesync deploy list
 ```
 
-支持平台：
-- `vercel` - Vercel 部署
-- `netlify` - Netlify 部署
-- `docker` - Docker 镜像构建
-- `npm` - NPM 包发布
+Supported platforms:
+- `vercel` - Vercel deployment
+- `netlify` - Netlify deployment
+- `docker` - Docker image build
+- `npm` - NPM package publishing
 
-#### 配置部署钩子
+#### Configure the deployment hook
 ```bash
-# Docker 部署
+# Docker deployment
 codesync deploy hook --platform docker
 
-# Vercel 部署
+# Vercel deployment
 codesync deploy hook --platform vercel
 ```
 
 ---
 
-### 12. Release 自动化 ⭐ 新功能
+### 12. Release automation ⭐ New
 
-#### 创建 Release
+#### Create a release
 ```bash
 codesync release 1.0.0
 ```
 
-#### 创建预发布版本
+#### Create a prerelease
 ```bash
 codesync release 1.0.0-beta.1 --prerelease
 ```
 
-#### 创建草稿 Release
+#### Create a draft release
 ```bash
 codesync release 1.0.0 --draft
 ```
 
-自动完成：
-- 创建 Git Tag
-- 推送 Tag 到远程
-- 生成 Release Notes
-- 创建 GitHub Release
+Done automatically:
+- Create the Git tag
+- Push the tag to the remote
+- Generate the release notes
+- Create the GitHub release
 
 ---
 
-### 13. 代码搜索 ⭐ 新功能
+### 13. Code search ⭐ New
 
-#### 搜索代码
+#### Search the code
 ```bash
 codesync search "function login"
 ```
 
-#### 语义搜索
+#### Semantic search
 ```bash
 codesync search "api authentication" --type semantic
 ```
 
-#### 搜索指定文件
+#### Search in a specific file
 ```bash
 codesync search "TODO" --file src/index.js
 ```
 
 ---
 
-### 14. 安全检测
+### 14. Security checks
 
-#### 扫描敏感信息
+#### Scan for sensitive information
 ```bash
-# 扫描暂存区
+# Scan the staged changes
 codesync security scan
 
-# 扫描指定文件
+# Scan a specific file
 codesync security scan --file src/config.js
 ```
 
-#### Pre-commit 钩子检测
+#### Pre-commit hook detection
 ```bash
 codesync security pre-commit
 ```
 
-#### 许可证合规检测 ⭐ 新功能
+#### License compliance checks ⭐ New
 ```bash
 codesync security license
 ```
 
-会检查：
-- 依赖许可证
-- 合规性（MIT, Apache-2.0, BSD, ISC 等）
-- 生成许可证报告
+It checks:
+- Dependency licenses
+- Compliance (MIT, Apache-2.0, BSD, ISC, etc.)
+- Generates a license report
 
 ---
 
-### 15. CI/CD 集成
+### 15. CI/CD integration
 
-#### 安装 GitHub Actions
+#### Install GitHub Actions
 ```bash
 codesync ci install --platform github
 ```
 
-#### 安装 GitLab CI
+#### Install GitLab CI
 ```bash
 codesync ci install --platform gitlab
 ```
 
-#### 卸载 CI/CD 配置
+#### Remove the CI/CD configuration
 ```bash
 codesync ci uninstall --platform github
 ```
 
 ---
 
-### 16. Git 高级操作
+### 16. Advanced Git operations
 
-#### 查看提交历史
+#### Show the commit history
 ```bash
 codesync git log
 ```
 
-#### 查看待提交变更
+#### Show the pending changes
 ```bash
 codesync git diff
 ```
 
-#### 项目分析
+#### Analyze the project
 ```bash
 codesync git analyze
 ```
 
-#### 批量处理
+#### Batch processing
 ```bash
 codesync git batch
 ```
 
-#### Amend 提交
+#### Amend a commit
 ```bash
 codesync git amend
 ```
 
-#### Squash 提交
+#### Squash commits
 ```bash
 codesync git squash --number 5
 ```
 
-#### 创建分支
+#### Create a branch
 ```bash
 codesync git branch --name feature/new-feature
 ```
 
 ---
 
-### 17. 缓存管理
+### 17. Cache management
 
-#### 查看缓存统计
+#### Show the cache statistics
 ```bash
 codesync cache --stats
 ```
 
-#### 清除所有缓存
+#### Clear all cached data
 ```bash
 codesync cache --clear
 ```
 
-#### 清理过期缓存
+#### Remove expired entries
 ```bash
 codesync cache --expire
 ```
 
 ---
 
-### 18. 配置管理
+### 18. Configuration management
 
-#### 交互式配置向导
+#### Interactive setup wizard
 ```bash
 codesync init
 ```
 
-#### 查看当前配置
+#### Show the current configuration
 ```bash
 codesync config --list
 ```
 
-#### 设置配置项
+#### Set a configuration value
 ```bash
 codesync config set apiKey=sk-xxx
 codesync config set githubToken=ghp_xxx
@@ -528,118 +528,118 @@ codesync config set model=gpt-4o
 
 ---
 
-## 📊 功能对比
+## 📊 Feature Comparison
 
-| 功能 | CodeSync | Git 命令 | commitizen | aicommits |
+| Feature | CodeSync | Git commands | commitizen | aicommits |
 |------|----------|----------|------------|-----------|
-| 一键上传 | ✅ | ❌ | ❌ | ❌ |
-| 一键下载 | ✅ | ❌ | ❌ | ❌ |
-| AI 提交信息 | ✅ | ❌ | 手动 | ✅ |
-| 智能体自动上传 | ✅ | ❌ | ❌ | ❌ |
-| 代码注解/解释/审查 | ✅ | ❌ | ❌ | ❌ |
-| AI 审查 Bot | ✅ | ❌ | ❌ | ❌ |
-| Pre-commit Hook 模板 | ✅ | 手动 | 部分 | ❌ |
-| 提交模板库 | ✅ | ❌ | 手动 | ❌ |
-| Web Dashboard | ✅ | ❌ | ❌ | ❌ |
-| 插件系统 | ✅ | ❌ | ❌ | ❌ |
-| 自动化部署 | ✅ | ❌ | ❌ | ❌ |
-| Release 自动化 | ✅ | 手动 | ❌ | ❌ |
-| 代码搜索 | ✅ | grep | ❌ | ❌ |
-| 许可证检测 | ✅ | ❌ | ❌ | ❌ |
-| CI/CD 集成 | ✅ | 手动 | ❌ | ❌ |
-| VS Code 扩展 | ✅ | ❌ | ❌ | ❌ |
-| 桌面应用 | ✅ | ❌ | ❌ | ❌ |
+| One-click upload | ✅ | ❌ | ❌ | ❌ |
+| One-click download | ✅ | ❌ | ❌ | ❌ |
+| AI commit messages | ✅ | ❌ | Manual | ✅ |
+| Agent auto upload | ✅ | ❌ | ❌ | ❌ |
+| Code annotation / explanation / review | ✅ | ❌ | ❌ | ❌ |
+| AI review bot | ✅ | ❌ | ❌ | ❌ |
+| Pre-commit hook templates | ✅ | Manual | Partial | ❌ |
+| Commit template library | ✅ | ❌ | Manual | ❌ |
+| Web dashboard | ✅ | ❌ | ❌ | ❌ |
+| Plugin system | ✅ | ❌ | ❌ | ❌ |
+| Automated deployment | ✅ | ❌ | ❌ | ❌ |
+| Release automation | ✅ | Manual | ❌ | ❌ |
+| Code search | ✅ | grep | ❌ | ❌ |
+| License detection | ✅ | ❌ | ❌ | ❌ |
+| CI/CD integration | ✅ | Manual | ❌ | ❌ |
+| VS Code extension | ✅ | ❌ | ❌ | ❌ |
+| Desktop app | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
-## 🎯 使用场景
+## 🎯 Use Cases
 
-### 场景 1：Git 新手第一次上传项目
+### Scenario 1: A Git beginner uploads their first project
 
 ```bash
-# 你刚写完一个项目，想上传到 GitHub
-# 不需要懂 git init / add / commit / push
+# You just finished a project and want to upload it to GitHub
+# No need to know git init / add / commit / push
 
-codesync init                                    # 配置 API Key
+codesync init                                    # configure the API key
 codesync upload --platform github --name my-first-project
-# 完成！自动创建仓库、自动提交、自动推送
+# Done! The repository is created, committed and pushed automatically
 ```
 
-### 场景 2：完全自动化的开发流程
+### Scenario 2: A fully automated development flow
 
 ```bash
-# 配置智能体
+# Configure the agent
 codesync agent-init
 
-# 启动智能体
+# Start the agent
 codesync agent start
 
-# 现在正常开发代码，智能体自动：
-# - 监听文件变化
-# - 生成提交信息
-# - 自动提交和推送
-# 完全无需手动操作！
+# Now develop normally, the agent automatically:
+# - watches for file changes
+# - generates the commit message
+# - commits and pushes
+# No manual interaction at all!
 ```
 
-### 场景 3：快速下载并运行开源项目
+### Scenario 3: Quickly download and run an open-source project
 
 ```bash
 codesync download https://github.com/vercel/next.js --install
-# 自动克隆 + 自动安装依赖
+# Auto-clone + automatic dependency installation
 ```
 
-### 场景 4：团队协作，强制提交规范
+### Scenario 4: Team collaboration with enforced conventions
 
 ```bash
-# 队长初始化团队配置
+# The team lead initializes the team configuration
 codesync team init
 
-# 队员安装规范钩子
+# Team members install the convention hooks
 codesync team enforce
 
-# 之后每次提交都会自动校验
+# Every commit is validated from now on
 ```
 
-### 场景 5：AI 辅助理解代码
+### Scenario 5: Understanding code with AI
 
 ```bash
-# 给看不懂的代码加注释
+# Add comments to code you don't understand
 codesync ai annotate -f src/utils/calc.js
 
-# 解释代码功能
+# Explain what the code does
 codesync ai explain -f src/utils/calc.js
 
-# 审查代码质量
+# Review the code quality
 codesync ai review -f src/utils/calc.js
 ```
 
-### 场景 6：自动化 Release 流程
+### Scenario 6: An automated release flow
 
 ```bash
-# 开发完成后，一键创建 Release
+# After development is done, create the release in one command
 codesync release 2.0.0
 
-# 自动完成：
-# - 创建 Tag
-# - 推送 Tag
-# - 生成 Release Notes
-# - 创建 GitHub Release
+# Done automatically:
+# - create the tag
+# - push the tag
+# - generate the release notes
+# - create the GitHub release
 ```
 
 ---
 
-## 📚 详细文档
+## 📚 Detailed documentation
 
-- [README.md](README.md) - 主文档
-- [AGENT_GUIDE.md](AGENT_GUIDE.md) - 智能体使用指南
-- [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - 实施报告
-- [拓展.md](拓展.md) - 功能拓展计划
+- [README.md](README.md) - main documentation
+- [AGENT_GUIDE.md](AGENT_GUIDE.md) - agent usage guide
+- [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - implementation report
+- [EXTENSIONS.md](EXTENSIONS.md) - feature extension roadmap
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 1. 安装
+### 1. Install
 
 ```bash
 git clone <repo-url>
@@ -648,31 +648,31 @@ npm install
 npm run link:cli
 ```
 
-### 2. 配置
+### 2. Configure
 
 ```bash
 codesync init
 ```
 
-### 3. 开始使用
+### 3. Start using it
 
 ```bash
-# 上传项目
+# Upload a project
 codesync upload --platform github --name my-project
 
-# 或启动智能体
+# Or start the agent
 codesync agent-init
 codesync agent start
 ```
 
 ---
 
-## 🤝 贡献
+## 🤝 Contributing
 
-欢迎提交 Issue 和 Pull Request！
+Issues and pull requests are welcome!
 
 ---
 
-## 📄 许可证
+## 📄 License
 
 MIT License

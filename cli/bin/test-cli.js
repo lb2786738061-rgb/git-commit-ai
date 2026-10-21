@@ -96,14 +96,29 @@ program
 
     const existing = readConfig();
 
+    const defaultModelValues = ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
+    let initialModelIndex = 0;
+    if (existing.model) {
+      const foundIdx = defaultModelValues.indexOf(existing.model);
+      initialModelIndex = foundIdx !== -1 ? foundIdx : 3;
+    }
+
     const response = await prompts([
       { type: 'text', name: 'apiKey', message: 'OpenAI API Key:', initial: existing.apiKey || '' },
       { type: 'text', name: 'apiBase', message: 'API Base URL:', initial: existing.apiBase || 'https://api.openai.com/v1' },
       { type: 'select', name: 'model', message: '选择默认模型:', choices: [
         { title: 'gpt-4o-mini (快速)', value: 'gpt-4o-mini' },
         { title: 'gpt-4o (强大)', value: 'gpt-4o' },
-        { title: 'gpt-3.5-turbo (经济)', value: 'gpt-3.5-turbo' }
-      ], initial: 0 },
+        { title: 'gpt-3.5-turbo (经济)', value: 'gpt-3.5-turbo' },
+        { title: '自定义模型...', value: 'custom' }
+      ], initial: initialModelIndex },
+      {
+        type: (prev) => prev === 'custom' ? 'text' : null,
+        name: 'customModel',
+        message: '输入自定义模型名称:',
+        initial: existing.model && !defaultModelValues.includes(existing.model) ? existing.model : '',
+        validate: (val) => val && val.trim().length > 0 ? true : '模型名称不能为空'
+      },
       { type: 'select', name: 'convention', message: '选择提交规范:', choices: [
         { title: 'Angular 规范', value: 'angular' },
         { title: 'Gitmoji 规范', value: 'gitmoji' }
@@ -116,10 +131,15 @@ program
       { type: 'confirm', name: 'smartModel', message: '启用智能模型选择?', initial: existing.smartModel !== false }
     ]);
 
-    if (response.apiKey === undefined) {
+    if (response.apiKey === undefined || (response.model === 'custom' && !response.customModel)) {
       console.log(pc.yellow('\n操作已取消。'));
       return;
     }
+
+    if (response.model === 'custom') {
+      response.model = response.customModel.trim();
+    }
+    delete response.customModel;
 
     writeConfig(response);
     console.log(pc.green('\n✅ 配置已保存！'));

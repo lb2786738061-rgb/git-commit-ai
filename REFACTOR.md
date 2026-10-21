@@ -1,28 +1,28 @@
-# 🔄 项目重构总结
+# 🔄 Project Refactoring Summary
 
-## 完成情况
+## Completion Status
 
-### ✅ 第一步：重构项目结构
+### ✅ Step 1: Refactor the Project Structure
 
-已创建新的目录结构：
+The new directory structure has been created:
 
 ```
 codesync/
-├── shared/               # 共享核心模块
-│   ├── git/            # Git操作
+├── shared/               # Shared core modules
+│   ├── git/            # Git operations
 │   │   ├── operations.js
 │   │   ├── upload.js
 │   │   └── download.js
-│   ├── ai/             # AI功能
+│   ├── ai/             # AI features
 │   │   ├── commit.js
 │   │   ├── prompts.js
 │   │   └── annotate.js
-│   ├── platform/       # 平台集成
+│   ├── platform/       # Platform integrations
 │   │   ├── github.js
 │   │   ├── gitee.js
 │   │   └── index.js
-│   └── config.js       # 配置管理
-├── cli/                # CLI工具
+│   └── config.js       # Configuration management
+├── cli/                # CLI tool
 │   ├── bin/
 │   │   └── codesync.js
 │   ├── src/
@@ -33,167 +33,167 @@ codesync/
 │   │       ├── ai.js
 │   │       └── config.js
 │   └── package.json
-├── desktop/            # 桌面应用（待开发）
+├── desktop/            # Desktop application (pending development)
 │   ├── src/
 │   ├── src/pages/
 │   └── src/components/
-└── package.json       # 根配置（workspaces）
+└── package.json       # Root configuration (workspaces)
 ```
 
-### ✅ 第二步：开发核心Git操作模块
+### ✅ Step 2: Develop the Core Git Operations Module
 
 #### shared/git/operations.js
 
-- GitOperations 类封装所有Git操作
-- 支持的操作：
-  - init() - 初始化仓库
-  - addAll() - 添加所有文件
-  - commit() - 提交
-  - push() - 推送
-  - clone() - 克隆
-  - pull() - 拉取
-  - status() - 获取状态
-  - log() - 获取历史
-  - getDiff() - 获取差异
-  - addRemote() - 添加远程
-  - setBranch() - 设置分支
-  - reset() - 回退
+- The GitOperations class encapsulates all Git operations
+- Supported operations:
+  - init() - Initialize the repository
+  - addAll() - Add all files
+  - commit() - Commit
+  - push() - Push
+  - clone() - Clone
+  - pull() - Pull
+  - status() - Get the status
+  - log() - Get the history
+  - getDiff() - Get the diff
+  - addRemote() - Add a remote
+  - setBranch() - Set the branch
+  - reset() - Reset
 
 #### shared/git/upload.js
 
-- uploadProject() 函数
-- 自动化上传流程：
-  1. 检查/初始化Git
-  2. 添加文件
-  3. AI生成提交信息
-  4. 提交
-  5. 创建远程仓库
-  6. 关联远程
-  7. 推送
+- uploadProject() function
+- Automated upload flow:
+  1. Check/initialize Git
+  2. Add files
+  3. Generate the commit message with AI
+  4. Commit
+  5. Create the remote repository
+  6. Link the remote
+  7. Push
 
 #### shared/git/download.js
 
-- downloadProject() 函数
-- 自动化下载流程：
-  1. Clone仓库
-  2. 可选自动安装依赖（npm/pnpm/yarn）
+- downloadProject() function
+- Automated download flow:
+  1. Clone the repository
+  2. Optionally install dependencies automatically (npm/pnpm/yarn)
 
-### ✅ 第三步：整合现有AI功能
+### ✅ Step 3: Consolidate the Existing AI Features
 
 #### shared/ai/commit.js
 
-- 保留原有生成提交信息功能
-- 修改导入路径
+- Keep the existing commit message generation feature
+- Modify the import paths
 
-#### shared/ai/annotate.js（新增）
+#### shared/ai/annotate.js (new)
 
-- generateAnnotation() - 生成代码注释
-- explainCode() - 解释代码功能
-- reviewCode() - 代码审查
+- generateAnnotation() - Generate code annotations
+- explainCode() - Explain the code's functionality
+- reviewCode() - Code review
 
 #### shared/config.js
 
-- 修改配置文件名为 .codesync.json
-- 添加平台Token配置：
+- Change the configuration file name to .codesync.json
+- Add platform token configuration:
   - githubToken
   - giteeToken
   - gitlabToken
 
-### ✅ 第四步：逐步添加新功能
+### ✅ Step 4: Gradually Add New Features
 
-#### CLI工具
+#### CLI Tool
 
-**命令设计：**
+**Command design:**
 
 ```bash
-codesync upload              # 上传项目
-codesync download <url>     # 下载项目
-codesync update              # 更新项目
-codesync ai commit           # AI生成提交信息
-codesync ai annotate <file>  # AI代码注解
-codesync ai explain <file>   # AI代码解释
-codesync ai review <file>    # AI代码审查
-codesync config              # 查看配置
-codesync config set <key>    # 设置配置
+codesync upload              # Upload the project
+codesync download <url>     # Download the project
+codesync update              # Update the project
+codesync ai commit           # Generate the commit message with AI
+codesync ai annotate <file>  # AI code annotation
+codesync ai explain <file>   # AI code explanation
+codesync ai review <file>    # AI code review
+codesync config              # View the configuration
+codesync config set <key>    # Set the configuration
 ```
 
-**已实现命令：**
+**Implemented commands:**
 
-- ✅ upload - 上传项目
-- ✅ download - 下载项目
-- ✅ update - 更新项目
-- ✅ ai - AI功能（commit/annotate/explain/review）
-- ✅ config - 配置管理
+- ✅ upload - Upload the project
+- ✅ download - Download the project
+- ✅ update - Update the project
+- ✅ ai - AI features (commit/annotate/explain/review)
+- ✅ config - Configuration management
 
-#### 平台集成
+#### Platform Integrations
 
 **shared/platform/github.js**
 
-- createGitHubRepo() - 创建GitHub仓库
-- getGitHubUser() - 获取用户信息
+- createGitHubRepo() - Create a GitHub repository
+- getGitHubUser() - Get user information
 
 **shared/platform/gitee.js**
 
-- createGiteeRepo() - 创建Gitee仓库
-- getGiteeUser() - 获取用户信息
+- createGiteeRepo() - Create a Gitee repository
+- getGiteeUser() - Get user information
 
-## 📝 待办事项
+## 📝 Todo List
 
-### 桌面应用
+### Desktop Application
 
-- [x] Electron主进程
-- [x] 前端 app.js（7 个页面渲染器）
-- [x] 上传页面UI
-- [x] 下载页面UI
-- [x] 提交历史页面UI
-- [x] AI智能提交页面UI
-- [x] AI代码助手页面UI
-- [x] 团队协作页面UI
-- [x] 设置页面UI
-- [x] preload.js 完整 API 暴露
-- [x] main.js 完整 IPC 处理器
+- [x] Electron main process
+- [x] Frontend app.js (7 page renderers)
+- [x] Upload page UI
+- [x] Download page UI
+- [x] Commit history page UI
+- [x] AI smart commit page UI
+- [x] AI code assistant page UI
+- [x] Team collaboration page UI
+- [x] Settings page UI
+- [x] preload.js full API exposure
+- [x] main.js full IPC handlers
 
-### CLI增强
+### CLI Enhancements
 
-- [x] 添加交互式选择（prompts）
-- [x] 添加进度显示（ora）
-- [x] 添加颜色输出（picocolors）
-- [x] 添加错误处理（友好提示 + 恢复建议）
-- [x] 添加更多Git操作命令（changelog/analyze/batch）
-- [x] 添加 init 交互式配置向导
+- [x] Add interactive selection (prompts)
+- [x] Add progress display (ora)
+- [x] Add colored output (picocolors)
+- [x] Add error handling (friendly messages + recovery suggestions)
+- [x] Add more Git operation commands (changelog/analyze/batch)
+- [x] Add the init interactive configuration wizard
 
-### 平台适配
+### Platform Adaptation
 
-- [x] GitHub 平台适配
-- [x] Gitee 平台适配
-- [x] GitLab 平台适配（新增 gitlab.js）
+- [x] GitHub platform adaptation
+- [x] Gitee platform adaptation
+- [x] GitLab platform adaptation (added gitlab.js)
 
-### 配置统一
+### Unified Configuration
 
-- [x] 配置文件名统一为 .git-commit-ai.json
-- [x] 团队配置统一为 .git-commit-ai-team.json
-- [x] readConfig() 返回全部配置项
+- [x] Unify the configuration file name as .git-commit-ai.json
+- [x] Unify the team configuration as .git-commit-ai-team.json
+- [x] readConfig() returns all configuration options
 
-### 代码质量
+### Code Quality
 
-- [x] shared/git/operations.js 添加 diff 过滤逻辑
-- [x] 修复 ESM require() 调用为 import
+- [x] Add diff filtering logic to shared/git/operations.js
+- [x] Fix ESM require() calls to import
 
-### 测试
+### Tests
 
-- [x] 移动并更新现有测试
-- [x] 添加新功能测试（shared-config/shared-git-operations/shared-platform/desktop-app）
-- [ ] 集成测试
+- [x] Move and update the existing tests
+- [x] Add tests for the new features (shared-config/shared-git-operations/shared-platform/desktop-app)
+- [ ] Integration tests
 
-### 文档
+### Documentation
 
-- [ ] 详细使用文档
-- [ ] API文档
-- [ ] 开发文档
+- [ ] Detailed usage documentation
+- [ ] API documentation
+- [ ] Development documentation
 
-## 🚀 如何使用
+## 🚀 How to Use
 
-### 安装CLI
+### Install the CLI
 
 ```bash
 cd cli
@@ -201,50 +201,50 @@ npm install
 npm link
 ```
 
-### 配置
+### Configuration
 
 ```bash
 codesync config set apiKey=sk-xxx
 codesync config set githubToken=ghp_xxx
 ```
 
-### 测试上传
+### Test the Upload
 
 ```bash
-# 在一个项目目录
+# In a project directory
 codesync upload --platform github --name test-project
 ```
 
-### 测试AI功能
+### Test the AI Features
 
 ```bash
-# 生成提交信息
+# Generate a commit message
 git add .
 codesync ai commit
 
-# 代码注解
+# Code annotation
 codesync ai annotate -f some-file.js
 ```
 
-## 📊 代码统计
+## 📊 Code Statistics
 
-- 新增文件：15个
-- 修改文件：3个
-- 删除文件：0个
-- 代码行数：约1500行
+- New files: 15
+- Modified files: 3
+- Deleted files: 0
+- Lines of code: about 1500 lines
 
-## ⚠️ 注意事项
+## ⚠️ Notes
 
-1. 旧代码（src/）暂时保留，待完全测试后删除
-2. 配置文件名已统一为 .git-commit-ai.json
-3. 团队配置文件名已统一为 .git-commit-ai-team.json
-4. 需要配置平台Token才能上传
-5. CLI依赖 picocolors/ora/prompts（通过根 node_modules 共享）
+1. The old code (src/) is temporarily kept and will be deleted after the tests are fully passed
+2. The configuration file name has been unified as .git-commit-ai.json
+3. The team configuration file name has been unified as .git-commit-ai-team.json
+4. A platform token must be configured before uploading
+5. The CLI depends on picocolors/ora/prompts (shared through the root node_modules)
 
-## 🎯 下一步计划
+## 🎯 Next Steps
 
-1. **测试CLI功能** - 确保基本功能正常
-2. **完善错误处理** - 更友好的错误提示
-3. **开发桌面应用** - Electron + React
-4. **添加测试** - 单元测试和集成测试
-5. **编写文档** - 详细使用指南
+1. **Test the CLI features** - Make sure the basic features work properly
+2. **Improve the error handling** - Friendlier error messages
+3. **Develop the desktop application** - Electron + React
+4. **Add tests** - Unit tests and integration tests
+5. **Write the documentation** - Detailed usage guide

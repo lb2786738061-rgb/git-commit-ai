@@ -577,17 +577,17 @@ function renderSettingsPage(container) {
         el('span', { class: 'token-guide-label' }, 'GitHub Token:'),
         el('a', { class: 'token-guide-link', href: 'https://github.com/settings/tokens', target: '_blank' }, 'https://github.com/settings/tokens')
       ),
-      el('div', { class: 'token-guide-desc' }, 'Settings → Developer settings → Personal access tokens → Generate new token (classic)，勾选 repo 权限'),
+      el('div', { class: 'token-guide-desc' }, 'Settings → Developer settings → Personal access tokens → Generate new token (classic)，务必选择 classic 经典令牌并勾选 repo 权限'),
       el('div', { class: 'token-guide-item' },
         el('span', { class: 'token-guide-label' }, 'Gitee Token:'),
-        el('a', { class: 'token-guide-link', href: 'https://gitee.com/settings/profile', target: '_blank' }, 'https://gitee.com/settings/profile')
+        el('a', { class: 'token-guide-link', href: 'https://gitee.com/profile/personal_access_tokens', target: '_blank' }, 'https://gitee.com/profile/personal_access_tokens')
       ),
-      el('div', { class: 'token-guide-desc' }, '设置 → 私人令牌 → 生成令牌，勾选 repo 权限'),
+      el('div', { class: 'token-guide-desc' }, '设置 → 私人令牌 → 生成新令牌，勾选 projects 权限'),
       el('div', { class: 'token-guide-item' },
         el('span', { class: 'token-guide-label' }, 'GitLab Token:'),
-        el('a', { class: 'token-guide-link', href: 'https://gitlab.com/-/profile/personal_access_tokens', target: '_blank' }, 'https://gitlab.com/-/profile/personal_access_tokens')
+        el('a', { class: 'token-guide-link', href: 'https://gitlab.com/-/user_settings/personal_access_tokens', target: '_blank' }, 'https://gitlab.com/-/user_settings/personal_access_tokens')
       ),
-      el('div', { class: 'token-guide-desc' }, 'Preferences → Personal access tokens → Create new token，Scope 选 api')
+      el('div', { class: 'token-guide-desc' }, 'User Settings → Access Tokens → Add new token，Scope 选 api')
     )
   );
   container.appendChild(tokenGuide);

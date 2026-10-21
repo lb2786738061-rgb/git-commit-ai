@@ -1,7 +1,7 @@
 {
   "name": "codesync",
   "version": "2.0.0",
-  "description": "CodeSync - 简化Git操作 + AI代码助手",
+  "description": "CodeSync - simplified Git operations plus an AI code assistant",
   "private": true,
   "type": "module",
   "workspaces": [

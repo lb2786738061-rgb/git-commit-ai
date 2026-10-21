@@ -8,6 +8,8 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Features](https://img.shields.io/badge/features-14%20new-green.svg)](FEATURES_COMPLETE.md)
 
+**English** | [简体中文](README_ZH.md)
+
 ## 🎉 What's New in v2.0
 
 - 🤖 **Smart code upload assistant** — a fully automated upload experience
@@ -182,12 +184,12 @@ codesync config set apiBase=https://api.openai.com/v1  # API base URL (proxy fri
 ```
 
 #### 🔑 Where to get a token
-
+ 
 | Platform | Token type | Where to create it | Required scope |
 |----------|-----------|--------------------|----------------|
-| **GitHub** | Personal Access Token (classic) | https://github.com/settings/tokens | Check the `repo` scope |
-| **Gitee** | Private token | https://gitee.com/settings/profile | Check the `repo` scope |
-| **GitLab** | Personal Access Token | https://gitlab.com/-/profile/personal_access_tokens | Scope `api` |
+| **GitHub** | Personal Access Token (classic) | https://github.com/settings/tokens (or [direct link](https://github.com/settings/tokens/new?scopes=repo&description=codesync)) | Check the `repo` scope (classic token required) |
+| **Gitee** | Private token | https://gitee.com/profile/personal_access_tokens | Check the `projects` scope |
+| **GitLab** | Personal Access Token | https://gitlab.com/-/user_settings/personal_access_tokens | Scope `api` |
 | **OpenAI** | API key | https://platform.openai.com/api-keys | - |
 
 > Show the current configuration and token status: `codesync config --list`

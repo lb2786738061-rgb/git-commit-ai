@@ -1,4 +1,4 @@
-﻿import { readConfig } from '../config.js';
+import { readConfig } from '../config.js';
 
 /**
  * 拼接 API 地址（去掉末尾多余的斜杠）
@@ -6,7 +6,10 @@
  * @returns {string}
  */
 function buildChatUrl(apiBase) {
-  const base = (apiBase || '').trim().replace(/\/+$/, '');
+  const base = (apiBase || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+  if (base.endsWith('/chat/completions')) {
+    return base;
+  }
   return `${base}/chat/completions`;
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "codesync-desktop",
   "version": "2.0.0",
-  "description": "CodeSync 桌面应用 - 简化Git操作 + AI代码助手",
+  "description": "CodeSync Desktop - simplified Git operations plus an AI code assistant",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

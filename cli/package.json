@@ -1,10 +1,18 @@
 {
   "name": "codesync-cli",
   "version": "2.0.0",
-  "description": "CodeSync CLI - 简化Git操作 + AI代码助手",
+  "description": "CodeSync CLI - simplified Git operations (upload/download to GitHub, Gitee, GitLab) plus an AI code assistant for commit messages, annotation, explanation and review",
   "type": "module",
   "bin": {
     "codesync": "./bin/codesync.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lb2786738061-rgb/git-commit-ai.git"
+  },
+  "homepage": "https://github.com/lb2786738061-rgb/git-commit-ai#readme",
+  "bugs": {
+    "url": "https://github.com/lb2786738061-rgb/git-commit-ai/issues"
   },
   "scripts": {
     "start": "node bin/codesync.js"

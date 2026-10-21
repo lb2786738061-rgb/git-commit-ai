@@ -1,97 +1,97 @@
-# 更新日志
+# Changelog
 
-本文件记录 CodeSync 项目的所有重要变更。
+This file records all important changes to the CodeSync project.
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and versioning follows [Semantic Versioning](https://semver.org/lang/en/).
 
 ---
 
-## [未发布]
+## [Unreleased]
 
-### 新增
+### Added
 
-- **VS Code 插件：上传代码到远程仓库** — 插件内新增 `CodeSync: Upload Project to Remote Repository`，
-  完整复用 CLI 的上传流程（初始化仓库 → 生成 `.gitignore` → 暂存 → AI 生成提交信息 → 提交
-  → 平台建仓 → 关联远程 → 推送），支持 GitHub / Gitee / GitLab
-- **VS Code 插件：提交并推送** — 新增 `CodeSync: Commit and Push`，暂存全部改动 → AI 生成提交信息
-  （可编辑）→ 提交 → 推送到当前分支
-- **VS Code 插件：Token 与配置管理** — 新增 `CodeSync: Configure Platform Token`、
-  `CodeSync: Show Current Configuration`
-- **VS Code 插件：侧边栏入口** — 面板顶部新增「上传到远程仓库」「提交并推送」按钮
-- **CLI：`codesync push` 命令** — 暂存 → AI 生成提交信息 → 提交 → 推送，与插件共用 `shared/git/upload.js`
-  的 `syncProject()`；支持 `-m` 指定提交信息、`--bypass-hooks` 跳过钩子校验
-- **共享层：`syncProject()`** — `shared/git/upload.js` 新增增量同步能力，CLI / 桌面版 / 插件三端共用
-- **共享层：环境变量覆盖** — `shared/config.js` 支持通过环境变量覆盖 `smartModel` / `fastModel` /
-  `powerfulModel` / `enableCache` / `cacheTTL`
-- **VS Code 插件：Marketplace 图标** — 新增 128×128 / 256×256 PNG 图标
-- **文档** — 根 `README.md` 新增完整的「VS Code 插件使用指南」（安装、配置、命令一览、上传流程、
-  设置项、常见问题）
-- **文档** — 新增 `CHANGELOG.md`、`vscode-extension/CHANGELOG.md`、`RELEASE_GUIDE.md` 与
-  `vscode-extension/PUBLISHING.md`（Marketplace 发布指南）
-- **宣传图** — 新增 VS Code 界面模拟截图 6 张与演示动效 GIF（`vscode-extension/media/`）
-- **CI** — 新增 `.github/workflows/publish-vscode.yml`，打 `vscode-v*` 标签时自动打包并发布插件
+- **VS Code extension: upload a project to a remote repository** — new `CodeSync: Upload Project to Remote Repository`
+  command that reuses the CLI upload flow end to end (init repository → generate `.gitignore` → stage → AI-generated commit message → commit
+  → create the repository on the platform → link the remote → push), supporting GitHub / Gitee / GitLab
+- **VS Code extension: commit and push** — new `CodeSync: Commit and Push` command: stage all changes → AI-generated commit message
+  (editable) → commit → push to the current branch
+- **VS Code extension: token and configuration management** — new `CodeSync: Configure Platform Token` and
+  `CodeSync: Show Current Configuration` commands
+- **VS Code extension: sidebar entry points** — "Upload to Remote Repository" and "Commit and Push" buttons at the top of the panel
+- **CLI: `codesync push` command** — stage → AI-generated commit message → commit → push, sharing `syncProject()` from
+  `shared/git/upload.js` with the extension; supports `-m` for a custom message and `--bypass-hooks` to skip hook validation
+- **Shared layer: `syncProject()`** — `shared/git/upload.js` gained an incremental sync flow used by the CLI, the desktop app and the extension
+- **Shared layer: environment variable overrides** — `shared/config.js` can now override `smartModel` / `fastModel` /
+  `powerfulModel` / `enableCache` / `cacheTTL` through environment variables
+- **VS Code extension: Marketplace icons** — new 128×128 / 256×256 PNG icons
+- **Docs** — the root `README.md` now includes a complete "VS Code Extension Guide" (installation, configuration, command reference, upload flow,
+  settings and FAQ)
+- **Docs** — added `CHANGELOG.md`, `vscode-extension/CHANGELOG.md`, `RELEASE_GUIDE.md` and
+  `vscode-extension/PUBLISHING.md` (Marketplace publishing guide)
+- **Media** — added 6 VS Code UI screenshots and a demo animation (`vscode-extension/media/`)
+- **CI** — added `.github/workflows/publish-vscode.yml`, which packages and publishes the extension when a `vscode-v*` tag is pushed
 
-### 变更
+### Changed
 
-- **VS Code 插件统一配置** — 插件不再单独保存配置，改为读取共用的 `~/.git-commit-ai.json`；
-  VS Code 设置项降级为可选覆盖项（优先级：VS Code 设置 > 环境变量 > 配置文件）
-- **VS Code 插件复用共享核心** — `codeAssistant.ts` 改用 `shared/ai/annotate.js` 与
-  `shared/ai/commit.js`，移除 `openai` SDK 依赖（改用原生 `fetch`），打包产物从约 14k 行缩减到约 1.8k 行
-- **`shared/git/operations.js`** — `commit()` 新增 `bypassHooks` 选项（真正通过 `--no-verify` 生效）；
-  新增 `getRemotes()` 方法
-- **`shared/ai/annotate.js`** — 修复 API 地址末尾多余斜杠导致的请求地址拼接错误
-- **VS Code 插件脚本** — `npm run lint` 改为 `tsc --noEmit` 类型检查（原先引用未安装的 eslint 导致报错）
+- **Unified configuration in the VS Code extension** — the extension no longer keeps its own configuration and now reads the shared
+  `~/.git-commit-ai.json`; the VS Code settings became optional overrides (precedence: VS Code settings > environment variables > config file)
+- **VS Code extension reuses the shared core** — `codeAssistant.ts` now uses `shared/ai/annotate.js` and
+  `shared/ai/commit.js`, and the `openai` SDK dependency was dropped in favor of the native `fetch`; the bundle shrank from ~14k lines to ~1.8k lines
+- **`shared/git/operations.js`** — `commit()` gained a `bypassHooks` option (actually applied through `--no-verify`);
+  added a `getRemotes()` method
+- **`shared/ai/annotate.js`** — fixed the malformed request URL caused by a trailing slash in the API base URL
+- **VS Code extension scripts** — `npm run lint` now runs `tsc --noEmit` type checking (the previous eslint setup referenced a package that was never installed)
 
-### 修复
+### Fixed
 
-- 修复 VS Code 插件在多根工作区下无法定位项目路径的问题（优先使用当前打开文件所在目录）
+- Fixed the VS Code extension failing to resolve the project path in a multi-root workspace (it now prefers the directory of the currently open file)
 
 ---
 
 ## [2.0.0] - 2026-10-19
 
-### 新增
+### Added
 
-- **AI 代码上传助手（CodeSync Agent）** — 监听文件变化、自动生成提交信息、自动提交推送
-  - 四种上传策略：`smart`（智能）/ `immediate`（立即）/ `batch`（批量）/ `scheduled`（定时）
-  - 配置向导 `codesync agent-init`，配置保存到项目根目录 `.codesync-agent.json`
-  - 支持 Angular / Gitmoji 提交规范，中文 / 英文 / 日文提交语言
-- **Pre-commit Hook 模板** — `codesync hook install --template [eslint|stylelint|typescript|prettier|test|all|custom]`
-- **提交模板库** — 8 个内置模板 + 自定义模板 + 模板变量
-- **Web Dashboard** — `codesync dashboard` 启动本地服务，查看提交频率、贡献者、变更趋势
-- **插件系统** — `codesync plugin install/list/remove`，支持 AI Provider、Platform、Pre/Post-commit Hook
-- **自动化部署** — Vercel / Netlify / Docker / NPM，`codesync deploy hook`
-- **Release 自动化** — `codesync release <version>`，自动生成 Release Notes 并创建 Release
-- **代码搜索** — `codesync search "查询"`，支持文本搜索与语义搜索
-- **许可证合规检测** — 扫描依赖许可证并生成合规报告
-- **VS Code 扩展** — 提交信息侧边栏、右键菜单 AI 解释/注解/审查、实时 Diff 预览
-- **CI/CD 集成** — `codesync ci install --platform github|gitlab`
-- **敏感信息检测** — `codesync security scan`，检测 API Key、密码、Token
-- **AI 代码审查 Bot** — `codesync review-bot`，GitHub / GitLab Webhook 自动 PR 审查
+- **AI code upload assistant (CodeSync Agent)** — watches for file changes, generates commit messages automatically and commits/pushes for you
+  - Four upload strategies: `smart` / `immediate` / `batch` / `scheduled`
+  - Setup wizard `codesync agent-init`, configuration saved to `.codesync-agent.json` in the project root
+  - Supports the Angular / Gitmoji conventions and Chinese / English / Japanese commit languages
+- **Pre-commit hook templates** — `codesync hook install --template [eslint|stylelint|typescript|prettier|test|all|custom]`
+- **Commit template library** — 8 built-in templates + custom templates + template variables
+- **Web dashboard** — `codesync dashboard` starts a local server showing commit frequency, contributors and change trends
+- **Plugin system** — `codesync plugin install/list/remove`, supporting AI providers, platforms and pre/post-commit hooks
+- **Automated deployment** — Vercel / Netlify / Docker / NPM through `codesync deploy hook`
+- **Release automation** — `codesync release <version>` generates release notes and creates the release
+- **Code search** — `codesync search "query"`, with text and semantic search
+- **License compliance checks** — scans dependency licenses and generates a compliance report
+- **VS Code extension** — commit message sidebar, AI explain/annotate/review in the context menu, live diff preview
+- **CI/CD integration** — `codesync ci install --platform github|gitlab`
+- **Secret detection** — `codesync security scan` detects API keys, passwords and tokens
+- **AI code review bot** — `codesync review-bot`, automatic PR reviews via GitHub / GitLab webhooks
 
-### 变更
+### Changed
 
-- 全面切换为 npm workspaces 架构（`cli` / `desktop`）
-- 抽取 `shared/` 目录统一 CLI、桌面应用、扩展三端的核心逻辑
-- Git 操作全面封装到 `shared/git/operations.js`
+- Fully migrated to the npm workspaces architecture (`cli` / `desktop`)
+- Extracted the `shared/` directory to unify the core logic of the CLI, the desktop app and the extension
+- All Git operations are now wrapped in `shared/git/operations.js`
 
 ---
 
 ## [1.0.0] - 2026-06-25
 
-### 新增
+### Added
 
-- 一键上传项目到 GitHub / Gitee / GitLab
-- 一键下载项目并自动安装依赖
-- 智能更新（add → commit → push）
-- 版本回退
-- AI 提交信息生成（Angular / Gitmoji 规范，多语言）
-- 代码注解 / 解释 / 审查
-- Changelog 自动生成
-- 团队配置同步 + Git 钩子强制校验
-- AI 响应缓存与智能模型选择
+- One-click upload to GitHub / Gitee / GitLab
+- One-click download with automatic dependency installation
+- Smart update (add → commit → push)
+- Version rollback
+- AI commit message generation (Angular / Gitmoji conventions, multi-language)
+- Code annotation / explanation / review
+- Automatic changelog generation
+- Team configuration sync + Git hook enforcement
+- AI response caching and smart model selection
 
-[未发布]: https://github.com/lb2786738061-rgb/git-commit-ai/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/lb2786738061-rgb/git-commit-ai/compare/v2.0.0...HEAD
 [2.0.0]: https://github.com/lb2786738061-rgb/git-commit-ai/releases/tag/v2.0.0
 [1.0.0]: https://github.com/lb2786738061-rgb/git-commit-ai/releases/tag/v1.0.0

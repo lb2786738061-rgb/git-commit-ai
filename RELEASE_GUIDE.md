@@ -1,96 +1,97 @@
-# CodeSync 发布指南
+# CodeSync Release Guide
 
-本文档说明如何发布 CodeSync 的各个组成部分：
+This document explains how to release each part of CodeSync:
 
-| 组成部分 | 目录 | 发布目标 |
+| Component | Directory | Release target |
 | --- | --- | --- |
-| CLI | `cli/` | npm（包名 `codesync-cli`） |
-| 桌面应用 | `desktop/` | GitHub Release 安装包 |
-| VS Code 插件 | `vscode-extension/` | VS Code Marketplace |
-| 核心库 | `shared/` | 不单独发布，随 CLI 一起分发 |
+| CLI | `cli/` | npm (package name `codesync-cli`) |
+| Desktop app | `desktop/` | GitHub Release installers |
+| VS Code extension | `vscode-extension/` | VS Code Marketplace |
+| Core library | `shared/` | Not published separately, shipped with the CLI |
 
 ---
 
-## 一、发布前检查清单
+## 1. Pre-release checklist
 
 ```bash
-# 1. 确认工作区干净
+# 1. Make sure the working tree is clean
 git status
 
-# 2. 跑通全部测试
+# 2. Run the full test suite
 npm test
 
-# 3. 构建插件并做类型检查
+# 3. Build the extension and run the type check
 cd vscode-extension && npm test && cd ..
 
-# 4. 确认 CLI 可用
+# 4. Make sure the CLI works
 node cli/bin/codesync.js --version
 ```
 
-- [ ] 全部测试通过
-- [ ] `CHANGELOG.md` 的「未发布」段落已整理为本次版本内容
-- [ ] 版本号已在所有 `package.json` 中同步
-- [ ] README 中的命令、截图与实际行为一致
-- [ ] 工作区已提交并推送到 `main`
+- [ ] All tests pass
+- [ ] The "Unreleased" section of `CHANGELOG.md` has been turned into the content of this release
+- [ ] The version number is synced across all `package.json` files
+- [ ] The commands and screenshots in the README match the actual behavior
+- [ ] The working tree is committed and pushed to `main`
 
 ---
 
-## 二、版本号同步
+## 2. Version number sync
 
-本项目有 4 处需要维护版本号，发布前必须保持一致：
+The project keeps the version number in 4 places; they must stay consistent before a release:
 
-| 文件 | 当前值 | 说明 |
+| File | Current value | Notes |
 | --- | --- | --- |
-| `package.json` | `2.0.0` | 根包（私有，仅用于 workspaces） |
-| `cli/package.json` | `2.0.0` | CLI，发布到 npm |
-| `desktop/package.json` | `2.0.0` | 桌面应用 |
-| `vscode-extension/package.json` | `1.0.0` | VS Code 插件，版本号独立维护 |
+| `package.json` | `2.0.0` | Root package (private, only used for workspaces) |
+| `cli/package.json` | `2.0.0` | CLI, published to npm |
+| `desktop/package.json` | `2.0.0` | Desktop app |
+| `vscode-extension/package.json` | `1.0.0` | VS Code extension, versioned independently |
 
 ```bash
-# 用 npm version 逐个更新（会自动打 git tag，注意根目录的 private 包不适合用这条）
+# Use npm version to update them one by one (it also creates a git tag; the private
+# root package is not suitable for this command)
 npm version patch --prefix cli
 npm version patch --prefix desktop
 npm version patch --prefix vscode-extension
 ```
 
-> ⚠️ 根 `package.json` 是 `"private": true`，**不要**对它执行 `npm version`（会创建无意义的 tag）。
+> ⚠️ The root `package.json` is `"private": true` — **do not** run `npm version` on it (it creates a meaningless tag).
 
-### 版本号约定
+### Versioning convention
 
-| 变更类型 | 版本位 | 示例 |
+| Change type | Version part | Example |
 | --- | --- | --- |
-| 修复 bug、文案调整 | patch | `2.0.0` → `2.0.1` |
-| 新增功能、新增命令 | minor | `2.0.0` → `2.1.0` |
-| 不兼容变更、配置结构调整 | major | `2.0.0` → `3.0.0` |
+| Bug fix, copy tweaks | patch | `2.0.0` → `2.0.1` |
+| New feature, new command | minor | `2.0.0` → `2.1.0` |
+| Breaking change, config restructuring | major | `2.0.0` → `3.0.0` |
 
 ---
 
-## 三、创建 GitHub Release
+## 3. Creating a GitHub Release
 
-### 方式 1：GitHub 网页（最简单）
+### Option 1: GitHub web UI (easiest)
 
-1. 打开 <https://github.com/lb2786738061-rgb/git-commit-ai/releases/new>
-2. **Choose a tag** → 选择已有的 `v2.1.0`，或选择 `Create new tag: v2.1.0 on main`
-3. **Release title** 填 `CodeSync v2.1.0`
-4. **Release description** 粘贴 `CHANGELOG.md` 中对应版本的正文
-5. 勾选 `Set as a pre-release`（预发布时）
-6. 点击 **Publish release**
+1. Open <https://github.com/lb2786738061-rgb/git-commit-ai/releases/new>
+2. **Choose a tag** → select the existing `v2.1.0`, or choose `Create new tag: v2.1.0 on main`
+3. **Release title**: `CodeSync v2.1.0`
+4. **Release description**: paste the matching section of `CHANGELOG.md`
+5. Check `Set as a pre-release` (for prereleases)
+6. Click **Publish release**
 
-### 方式 2：GitHub CLI
+### Option 2: GitHub CLI
 
 ```bash
 gh auth login
 
-# 方式 A：直接用 CHANGELOG 内容
+# Option A: use the CHANGELOG content directly
 gh release create v2.1.0 --title "CodeSync v2.1.0" --notes-file CHANGELOG.md
 
-# 方式 B：自动根据 commit 生成（推荐用 codesync 自己的命令）
+# Option B: generate it from the commits (recommended: use codesync's own command)
 node cli/bin/codesync.js release v2.1.0
 ```
 
-`codesync release` 会自动完成：创建 tag → 推送 tag → 分类 commit 生成 Release Notes → 调用 `gh` 创建 Release。
+`codesync release` does the whole thing: creates the tag → pushes the tag → categorizes the commits into release notes → calls `gh` to create the release.
 
-### 方式 3：GitHub API
+### Option 3: GitHub API
 
 ```bash
 curl -X POST \
@@ -101,7 +102,7 @@ curl -X POST \
     "tag_name": "v2.1.0",
     "target_commitish": "main",
     "name": "CodeSync v2.1.0",
-    "body": "CHANGELOG.md 中的内容",
+    "body": "The content of the matching CHANGELOG.md section",
     "draft": false,
     "prerelease": false
   }'
@@ -109,22 +110,22 @@ curl -X POST \
 
 ---
 
-## 四、发布到 npm（CLI）
+## 4. Publishing the CLI to npm
 
 ```bash
 cd cli
 
-# 确认包内容（避免把不该发布的东西打进去）
+# Check the package contents first (avoid shipping things that should not be published)
 npm pack --dry-run
 
-# 发布
+# Publish
 npm publish
 
-# 预发布版本
+# Prerelease
 npm publish --tag beta
 ```
 
-发布后验证：
+Verify after publishing:
 
 ```bash
 npm view codesync-cli versions
@@ -132,13 +133,13 @@ npm install -g codesync-cli
 codesync --version
 ```
 
-> 当前登录状态可用 `npm whoami` 检查；若提示 `ENEEDAUTH`，先执行 `npm login`。
+> Check the current login with `npm whoami`; if it reports `ENEEDAUTH`, run `npm login` first.
 
 ---
 
-## 五、发布 VS Code 插件到 Marketplace
+## 5. Publishing the VS Code extension to the Marketplace
 
-详见 [`vscode-extension/PUBLISHING.md`](./vscode-extension/PUBLISHING.md)，核心步骤：
+See [`vscode-extension/PUBLISHING.md`](./vscode-extension/PUBLISHING.md). The core steps:
 
 ```bash
 cd vscode-extension
@@ -149,7 +150,7 @@ npx @vscode/vsce login lb2786738061-rgb
 npx @vscode/vsce publish --packagePath codesync-vscode-1.0.0.vsix
 ```
 
-或使用内置的自动化工作流（打 `vscode-v*` 标签触发）：
+Or use the built-in automation (triggered by a `vscode-v*` tag):
 
 ```bash
 git tag vscode-v1.0.0
@@ -158,17 +159,17 @@ git push origin vscode-v1.0.0
 
 ---
 
-## 六、桌面应用安装包
+## 6. Desktop app installers
 
-桌面应用随 GitHub Release 分发：
+The desktop app is distributed through GitHub Releases:
 
 ```bash
 cd desktop
 npm install
-npm run build          # 若存在打包脚本；否则用 electron-builder / electron-packager
+npm run build          # if a packaging script exists; otherwise use electron-builder / electron-packager
 ```
 
-产物统一放到 `release/` 目录，命名规范：
+Put the artifacts in the `release/` directory using this naming convention:
 
 ```
 release/
@@ -177,23 +178,23 @@ release/
 └── codesync-desktop-v2.1.0-linux-x64.AppImage
 ```
 
-然后在 GitHub Release 页面把这些文件作为 **Release assets** 上传。
+Then upload these files as **Release assets** on the GitHub Release page.
 
 ---
 
-## 七、发布后验证
+## 7. Post-release verification
 
 ```bash
 # 1. GitHub Release
 open https://github.com/lb2786738061-rgb/git-commit-ai/releases
 
-# 2. npm 包
+# 2. npm package
 npm view codesync-cli version
 
 # 3. VS Code Marketplace
 open https://marketplace.visualstudio.com/items?itemName=lb2786738061-rgb.codesync-vscode
 
-# 4. 本地全局安装冒烟测试
+# 4. Local global install smoke test
 npm install -g codesync-cli
 codesync --help
 codesync config --list
@@ -201,28 +202,28 @@ codesync config --list
 
 ---
 
-## 八、常见问题
+## 8. FAQ
 
-**Release 里 `Full Changelog` 链接指向 `your-org/your-repo`**
-→ `shared/ai/commit.js` 与 `cli/src/commands/release.js` 中的仓库地址是占位符，发布前需替换为真实仓库地址。
+**The `Full Changelog` link in the release points to `your-org/your-repo`**
+→ The repository URL in `shared/ai/commit.js` and `cli/src/commands/release.js` is a placeholder and must be replaced with the real repository URL before publishing.
 
-**npm publish 报 `402 Payment Required`**
-→ 包名 `codesync-cli` 可能已被占用，或账号未开通发布权限。确认包名可用性：`npm view codesync-cli`。
+**`npm publish` fails with `402 Payment Required`**
+→ The package name `codesync-cli` may already be taken, or the account has no publishing rights. Check availability with `npm view codesync-cli`.
 
-**Marketplace 提示 `Extension name must be all lowercase`**
-→ `vscode-extension/package.json` 的 `name` 需全小写。
+**The Marketplace complains `Extension name must be all lowercase`**
+→ The `name` field in `vscode-extension/package.json` must be lowercase.
 
-**Marketplace 上传后搜不到**
-→ 审核需要时间；确认是全新版本号；检查是否误用了 `--pre-release`。
+**The extension is not searchable on the Marketplace after uploading**
+→ Review takes time; make sure the version number is new and that `--pre-release` was not used by accident.
 
-**标签已存在**
-→ `git tag -d v2.1.0 && git push origin :refs/tags/v2.1.0` 删除后重试。
+**The tag already exists**
+→ `git tag -d v2.1.0 && git push origin :refs/tags/v2.1.0` deletes it, then try again.
 
 ---
 
-## 相关文档
+## Related documents
 
-- [更新日志](./CHANGELOG.md)
-- [VS Code 插件发布指南](./vscode-extension/PUBLISHING.md)
-- [插件使用说明](./vscode-extension/README.md)
-- [功能清单](./FEATURES_COMPLETE.md)
+- [Changelog](./CHANGELOG.md)
+- [VS Code extension publishing guide](./vscode-extension/PUBLISHING.md)
+- [Extension usage guide](./vscode-extension/README.md)
+- [Feature list](./FEATURES_COMPLETE.md)

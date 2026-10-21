@@ -1,36 +1,36 @@
-# 项目开发日程与工作安排规划表 (2026年6月)
+# Project Development Schedule and Work Arrangement Plan (June 2026)
 
-此文档用于记录项目的开发进度与后续工作安排。每次开发前请先阅读此文档，明确当前阶段的目标，并在完成后将对应内容标记为【已更新】。
-
----
-
-## 📅 6月份开发日程安排
-
-- **[已更新] 6月4日**：实现远程仓库推送支持与锁定文件/媒体资源差异过滤功能。
-- **[已更新] 6月5日 - 6月7日**：设计并实现交互式配置向导（`gca init` 命令），引导新用户通过输入提示完成 API 密钥、接口地址和首选模型的初始化配置。
-- **[已更新] 6月8日 - 6月10日**：集成 Emoji 风格（Gitmoji）提交规范支持，允许在全局配置中切换，并更新系统提示词以适配表情符号前缀。
-- **[已更新] 6月11日 - 6月13日**：开发 Git 预提交钩子（Pre-commit Hook）便捷安装与卸载脚本，实现执行提交时自动触发交互。
-- **[已更新] 6月14日 - 6月16日**：设计自动范围检测算法，通过分析修改文件所在的子目录，智能推荐并预填提交范围（Scope）。
-- **[已更新] 6月17日 - 6月19日**：增加多语言提交支持，允许配置生成中文、英文、日文等不同语言的提交信息主体。
-- **[已更新] 6月20日 - 6月22日**：设计并开发 AI 自动生成更新日志（Changelog）功能，支持分析两个版本标签之间的提交历史。
-- **[已更新] 6月23日 - 6月25日**：编写提交消息合规性校验脚本，提供本地钩子校验，防止不合规的提交信息入库。
-- **[已更新] 6月26日 - 6月28日**：编写自动化测试脚本，全面覆盖配置向导、差异过滤、多语言和规范切换等核心流程。
-- **[已更新] 6月29日 - 6月30日**：项目整体代码重构与文档完善，整理使用手册，发布正式的 v1.1.0 稳定版本。
+This document records the development progress of the project and the follow-up work arrangements. Before each development session, please read this document first to clarify the goals of the current phase, and mark the corresponding content as [Updated] once it is completed.
 
 ---
 
-## 📅 10月份补充开发
+## 📅 June Development Schedule
 
-- **[已更新] 10月18日**：完成所有未完成功能：
-  - 🔴 P0：创建 GitLab 平台适配（shared/platform/gitlab.js）
-  - 🟡 P1：统一配置文件名（.git-commit-ai.json / .git-commit-ai-team.json）
-  - 🟡 P1：修复 readConfig() 返回全部配置项
-  - 🟡 P1：CLI 子包增强（picocolors/ora/prompts 交互式选择/颜色/进度/错误处理）
-  - 🟡 P1：CLI 新增命令（init/changelog/analyze/batch）
-  - 🟡 P1：桌面应用前端 app.js（7 个页面渲染器）
-  - 🟡 P1：桌面应用 preload.js 完整 API 暴露
-  - 🟡 P1：桌面应用 main.js 完整 IPC 处理器
-  - 🟢 P2：shared/git/operations.js 添加 diff 过滤逻辑
-  - 🟢 P2：修复 ESM require() → import
-  - 🟢 P3：新增 4 个测试文件（shared-config/shared-git-operations/shared-platform/desktop-app）
-  - 🟢 P3：根 package.json 添加 "type": "module"
+- **[Updated] June 4**: Implemented remote repository push support and lockfile/media asset diff filtering.
+- **[Updated] June 5 - June 7**: Designed and implemented the interactive configuration wizard (the `gca init` command), guiding new users through the initialization of the API key, the endpoint URL, and the preferred model via input prompts.
+- **[Updated] June 8 - June 10**: Integrated Emoji-style (Gitmoji) commit convention support, allowing it to be switched in the global configuration, and updated the system prompt to adapt to emoji prefixes.
+- **[Updated] June 11 - June 13**: Developed convenient installation and uninstallation scripts for the Git pre-commit hook (Pre-commit Hook), enabling automatic triggering on commit execution.
+- **[Updated] June 14 - June 16**: Designed the automatic scope detection algorithm, which analyzes the subdirectory containing the modified files to intelligently recommend and pre-fill the commit scope (Scope).
+- **[Updated] June 17 - June 19**: Added multilingual commit support, allowing the commit message body to be generated in different languages such as Chinese, English, and Japanese.
+- **[Updated] June 20 - June 22**: Designed and developed the AI automatic changelog (Changelog) generation feature, supporting the analysis of commit history between two version tags.
+- **[Updated] June 23 - June 25**: Wrote the commit message compliance validation script, providing local hook validation to prevent non-compliant commit messages from entering the repository.
+- **[Updated] June 26 - June 28**: Wrote the automated test scripts, comprehensively covering the core flows such as the configuration wizard, diff filtering, multilingual support, and convention switching.
+- **[Updated] June 29 - June 30**: Overall project code refactoring and documentation improvement, organizing the user manual and releasing the official v1.1.0 stable version.
+
+---
+
+## 📅 October Supplementary Development
+
+- **[Updated] October 18**: Completed all outstanding features:
+  - 🔴 P0: Create the GitLab platform adaptation (shared/platform/gitlab.js)
+  - 🟡 P1: Unify the configuration file names (.git-commit-ai.json / .git-commit-ai-team.json)
+  - 🟡 P1: Fix readConfig() to return all configuration options
+  - 🟡 P1: CLI sub-package enhancements (picocolors/ora/prompts interactive selection/colors/progress/error handling)
+  - 🟡 P1: New CLI commands (init/changelog/analyze/batch)
+  - 🟡 P1: Desktop application frontend app.js (7 page renderers)
+  - 🟡 P1: Desktop application preload.js full API exposure
+  - 🟡 P1: Desktop application main.js full IPC handlers
+  - 🟢 P2: Add diff filtering logic to shared/git/operations.js
+  - 🟢 P2: Fix ESM require() → import
+  - 🟢 P3: Add 4 new test files (shared-config/shared-git-operations/shared-platform/desktop-app)
+  - 🟢 P3: Add "type": "module" to the root package.json
