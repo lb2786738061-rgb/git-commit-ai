@@ -2134,33 +2134,33 @@ var vscode2 = __toESM(require("vscode"));
 // src/commitTreeItem.ts
 var vscode = __toESM(require("vscode"));
 var CommitTreeItem = class extends vscode.TreeItem {
-  constructor(label, collapsibleState, command, contextValue) {
+  constructor(label, collapsibleState, command, contextValue, iconId) {
     super(label, collapsibleState);
     this.label = label;
     this.collapsibleState = collapsibleState;
     this.command = command;
     this.contextValue = contextValue;
-    if (contextValue === "generate") {
-      this.iconPath = new vscode.ThemeIcon("edit");
-      this.contextValue = "generate";
-    } else if (contextValue === "suggestion") {
-      this.iconPath = new vscode.ThemeIcon("lightbulb");
-      this.contextValue = "suggestion";
-    } else if (contextValue === "diff") {
-      this.iconPath = new vscode.ThemeIcon("diff");
-      this.contextValue = "diff";
-    } else if (contextValue === "files") {
-      this.iconPath = new vscode.ThemeIcon("files");
-      this.contextValue = "files";
-    } else if (contextValue === "upload") {
-      this.iconPath = new vscode.ThemeIcon("cloud-upload");
-      this.contextValue = "upload";
-    } else if (contextValue === "sync") {
-      this.iconPath = new vscode.ThemeIcon("sync");
-      this.contextValue = "sync";
-    } else if (contextValue === "empty") {
-      this.iconPath = new vscode.ThemeIcon("info");
-      this.contextValue = "empty";
+    const icon = iconId || contextValue;
+    if (icon) {
+      const ICON_MAP = {
+        generate: "edit",
+        suggestion: "lightbulb",
+        diff: "diff",
+        files: "files",
+        upload: "cloud-upload",
+        "cloud-download": "cloud-download",
+        pull: "cloud-download",
+        sync: "sync",
+        empty: "info",
+        settings: "gear",
+        wizard: "wand",
+        key: "key",
+        guide: "book",
+        config: "settings-gear",
+        status: "output"
+      };
+      const themeIconName = ICON_MAP[icon] || icon;
+      this.iconPath = new vscode.ThemeIcon(themeIconName);
     }
   }
 };
@@ -2233,45 +2233,86 @@ var CommitPanelProvider = class {
       if (!this.stagedDiff) {
         items.push(
           new CommitTreeItem(
-            "\u6CA1\u6709\u6682\u5B58\u7684\u66F4\u6539",
+            "\u6CA1\u6709\u6682\u5B58\u7684\u66F4\u6539 (\u6682\u5B58\u540E\u53EFAI\u751F\u6210\u63D0\u4EA4)",
             vscode2.TreeItemCollapsibleState.None,
             { command: "git.stage", title: "\u6682\u5B58\u66F4\u6539" },
             "empty"
           )
         );
-        return items;
-      }
-      items.push(
-        new CommitTreeItem(
-          "\u6682\u5B58\u7684\u66F4\u6539",
-          vscode2.TreeItemCollapsibleState.Collapsed,
-          void 0,
-          "files"
-        )
-      );
-      if (this.suggestedCommitMessage) {
-        items.push(
-          new CommitTreeItem(
-            `\u5EFA\u8BAE: ${this.suggestedCommitMessage.substring(0, 50)}${this.suggestedCommitMessage.length > 50 ? "..." : ""}`,
-            vscode2.TreeItemCollapsibleState.None,
-            { command: "codesync.generateCommit", title: "\u91CD\u65B0\u751F\u6210" },
-            "suggestion"
-          )
-        );
       } else {
         items.push(
           new CommitTreeItem(
-            "\u751F\u6210\u63D0\u4EA4\u4FE1\u606F",
-            vscode2.TreeItemCollapsibleState.None,
-            { command: "codesync.generateCommit", title: "\u751F\u6210" },
-            "generate"
+            "\u6682\u5B58\u7684\u66F4\u6539",
+            vscode2.TreeItemCollapsibleState.Collapsed,
+            void 0,
+            "files"
           )
         );
+        if (this.suggestedCommitMessage) {
+          items.push(
+            new CommitTreeItem(
+              `\u5EFA\u8BAE: ${this.suggestedCommitMessage.substring(0, 50)}${this.suggestedCommitMessage.length > 50 ? "..." : ""}`,
+              vscode2.TreeItemCollapsibleState.None,
+              { command: "codesync.generateCommit", title: "\u91CD\u65B0\u751F\u6210" },
+              "suggestion"
+            )
+          );
+        } else {
+          items.push(
+            new CommitTreeItem(
+              "\u751F\u6210\u63D0\u4EA4\u4FE1\u606F",
+              vscode2.TreeItemCollapsibleState.None,
+              { command: "codesync.generateCommit", title: "\u751F\u6210" },
+              "generate"
+            )
+          );
+        }
       }
+      items.push(
+        new CommitTreeItem(
+          "\u914D\u7F6E\u4E0E\u4F7F\u7528\u6307\u5F15",
+          vscode2.TreeItemCollapsibleState.Expanded,
+          void 0,
+          "settings"
+        )
+      );
       return items;
     } else if (element.contextValue === "files") {
       const diffPreview = this.stagedDiff.substring(0, 500) + (this.stagedDiff.length > 500 ? "\n... (\u5DF2\u622A\u65AD)" : "");
       return [new CommitTreeItem(diffPreview, vscode2.TreeItemCollapsibleState.None, void 0, "diff")];
+    } else if (element.contextValue === "settings") {
+      return [
+        new CommitTreeItem(
+          "\u4E00\u952E\u914D\u7F6E\u5411\u5BFC\uFF08\u65B0\u624B\u63A8\u8350\uFF09",
+          vscode2.TreeItemCollapsibleState.None,
+          { command: "codesync.setupWizard", title: "\u4E00\u952E\u914D\u7F6E\u5411\u5BFC" },
+          "wizard"
+        ),
+        new CommitTreeItem(
+          "\u914D\u7F6E\u4EE3\u7801\u5E73\u53F0 Token (GitHub/Gitee)",
+          vscode2.TreeItemCollapsibleState.None,
+          { command: "codesync.setToken", title: "\u914D\u7F6E\u5E73\u53F0 Token" },
+          "key"
+        ),
+        new CommitTreeItem(
+          "\u6253\u5F00\u5B8C\u6574\u8BBE\u7F6E (API Key / URL)",
+          vscode2.TreeItemCollapsibleState.None,
+          { command: "codesync.openSettings", title: "\u6253\u5F00\u5B8C\u6574\u8BBE\u7F6E" },
+          "config"
+        ),
+        new CommitTreeItem(
+          "\u67E5\u770B\u5F53\u524D\u751F\u6548\u914D\u7F6E",
+          vscode2.TreeItemCollapsibleState.None,
+          { command: "codesync.showConfig", title: "\u67E5\u770B\u5F53\u524D\u751F\u6548\u914D\u7F6E" },
+          "status"
+        ),
+        new CommitTreeItem(
+          "\u65B0\u624B\u5165\u95E8\u4E0E\u4F7F\u7528\u6307\u5357",
+          vscode2.TreeItemCollapsibleState.None,
+          { command: "codesync.openGuide", title: "\u65B0\u624B\u5165\u95E8\u4E0E\u4F7F\u7528\u6307\u5357" },
+          "guide"
+        )
+      ];
     }
     return [];
   }
@@ -2624,52 +2665,317 @@ function mask(value) {
     return "(\u672A\u914D\u7F6E)";
   return value.length <= 8 ? MASK : `${value.slice(0, 4)}${MASK}${value.slice(-4)}`;
 }
+var PROVIDER_PRESETS = [
+  {
+    label: "\u{1F31F} \u667A\u8C31 AI (GLM-4 / GLM-4-Flash)",
+    description: "\u56FD\u5185\u76F4\u8FDE / \u514D\u8D39\u53CA\u9AD8\u6027\u4EF7\u6BD4 / \u6781\u901F\u54CD\u5E94",
+    detail: "\u63A5\u53E3: https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    apiBase: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    model: "glm-4-flash",
+    keyUrl: "https://open.bigmodel.cn/usercenter/apikeys"
+  },
+  {
+    label: "\u{1F31F} DeepSeek (deepseek-chat)",
+    description: "\u56FD\u5185\u76F4\u8FDE / \u8D85\u9AD8\u4EE3\u7801\u4E0E\u903B\u8F91\u6C34\u51C6 / \u6027\u4EF7\u6BD4\u4E4B\u738B",
+    detail: "\u63A5\u53E3: https://api.deepseek.com/v1",
+    apiBase: "https://api.deepseek.com/v1",
+    model: "deepseek-chat",
+    keyUrl: "https://platform.deepseek.com/api_keys"
+  },
+  {
+    label: "\u{1F31F} \u963F\u91CC\u4E91\u901A\u4E49\u5343\u95EE (Qwen-Plus)",
+    description: "\u56FD\u5185\u5927\u5382\u4E91\u670D\u52A1 / \u7A33\u5B9A\u53EF\u9760",
+    detail: "\u63A5\u53E3: https://dashscope.aliyuncs.com/compatible-mode/v1",
+    apiBase: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    model: "qwen-plus",
+    keyUrl: "https://bailian.console.aliyun.com/"
+  },
+  {
+    label: "\u{1F31F} \u6708\u4E4B\u6697\u9762 Moonshot (Kimi)",
+    description: "\u957F\u6587\u672C\u4E0E\u4EE3\u7801\u7406\u89E3\u80FD\u529B\u5F3A",
+    detail: "\u63A5\u53E3: https://api.moonshot.cn/v1",
+    apiBase: "https://api.moonshot.cn/v1",
+    model: "moonshot-v1-8k",
+    keyUrl: "https://platform.moonshot.cn/console/api-keys"
+  },
+  {
+    label: "\u{1F310} OpenAI \u5B98\u65B9 (GPT-4o-mini)",
+    description: "\u56FD\u9645\u4E3B\u6D41\u901A\u7528\u5927\u6A21\u578B\uFF08\u9700\u8981\u6D77\u5916\u7F51\u7EDC\u73AF\u5883\uFF09",
+    detail: "\u63A5\u53E3: https://api.openai.com/v1",
+    apiBase: "https://api.openai.com/v1",
+    model: "gpt-4o-mini",
+    keyUrl: "https://platform.openai.com/api-keys"
+  },
+  {
+    label: "\u{1F6E0}\uFE0F \u81EA\u5B9A\u4E49 OpenAI \u517C\u5BB9\u63A5\u53E3",
+    description: "\u81EA\u884C\u6307\u5B9A\u63A5\u53E3\u5730\u5740\u4E0E\u6A21\u578B\u540D\u79F0\uFF08\u4E2D\u8F6C\u7AD9\u3001\u672C\u5730Ollama\u7B49\uFF09",
+    detail: "\u624B\u52A8\u8F93\u5165 API Base \u4E0E Model",
+    apiBase: "",
+    model: "",
+    keyUrl: ""
+  }
+];
+async function setupWizardCommand(configManager2) {
+  const selectedProvider = await vscode9.window.showQuickPick(PROVIDER_PRESETS, {
+    title: "\u3010\u65B0\u624B\u5411\u5BFC \u7B2C1/3\u6B65\u3011\u9009\u62E9\u60A8\u7684\u5927\u6A21\u578B\u63D0\u4F9B\u5546",
+    placeHolder: "\u63A8\u8350\u56FD\u5185\u65B0\u624B\u9009\u62E9\u3010\u667A\u8C31 AI\u3011\u6216\u3010DeepSeek\u3011\uFF0C\u65E0\u9700\u7F51\u7EDC\u4EE3\u7406\u5373\u53EF\u7545\u5FEB\u4F7F\u7528"
+  });
+  if (!selectedProvider)
+    return;
+  let finalApiBase = selectedProvider.apiBase;
+  let finalModel = selectedProvider.model;
+  if (!finalApiBase) {
+    const inputBase = await vscode9.window.showInputBox({
+      title: "\u8F93\u5165\u63A5\u53E3\u5730\u5740 (API Base URL)",
+      prompt: "\u4F8B\u5982\uFF1Ahttps://api.openai.com/v1 \u6216\u60A8\u7684\u672C\u5730\u670D\u52A1\u5730\u5740",
+      value: configManager2.apiBase || "https://api.openai.com/v1",
+      ignoreFocusOut: true
+    });
+    if (!inputBase)
+      return;
+    finalApiBase = inputBase.trim();
+    const inputModel = await vscode9.window.showInputBox({
+      title: "\u8F93\u5165\u6A21\u578B\u540D\u79F0 (Model)",
+      prompt: "\u4F8B\u5982\uFF1Agpt-4o-mini, deepseek-chat, glm-4-flash",
+      value: configManager2.model || "gpt-4o-mini",
+      ignoreFocusOut: true
+    });
+    if (!inputModel)
+      return;
+    finalModel = inputModel.trim();
+  }
+  const currentKey = configManager2.apiKey;
+  const keyPrompt = selectedProvider.keyUrl ? `\u83B7\u53D6\u5BC6\u94A5\u7F51\u5740\uFF1A${selectedProvider.keyUrl} \uFF08\u5DF2\u914D\u8FC7\u53EF\u76F4\u63A5\u56DE\u8F66\uFF09` : "\u7C98\u8D34\u60A8\u7684 API Key / Token\uFF08\u5DF2\u914D\u8FC7\u53EF\u76F4\u63A5\u56DE\u8F66\uFF09";
+  const inputKey = await vscode9.window.showInputBox({
+    title: `\u3010\u65B0\u624B\u5411\u5BFC \u7B2C2/3\u6B65\u3011\u8F93\u5165 ${selectedProvider.label.split(" ")[1] || "\u6A21\u578B"} API Key`,
+    prompt: keyPrompt,
+    value: currentKey ? MASK : "",
+    password: true,
+    ignoreFocusOut: true
+  });
+  if (inputKey === void 0)
+    return;
+  const updates = {
+    apiBase: finalApiBase,
+    model: finalModel
+  };
+  if (inputKey && inputKey !== MASK) {
+    updates.apiKey = inputKey.trim();
+  }
+  const tokenChoice = await vscode9.window.showQuickPick(
+    [
+      {
+        label: "\u{1F419} \u914D\u7F6E GitHub \u4E2A\u4EBA\u4EE4\u724C (Personal Access Token)",
+        description: "\u65B9\u4FBF\u5728 GitHub \u4E0A\u4E00\u952E\u521B\u5EFA\u4ED3\u5E93\u5E76\u63A8\u9001",
+        id: "github"
+      },
+      {
+        label: "\u{1F98A} \u914D\u7F6E Gitee \u7801\u4E91\u79C1\u4EBA\u4EE4\u724C (Private Token)",
+        description: "\u65B9\u4FBF\u5728 Gitee \u7801\u4E91\u4E0A\u4E00\u952E\u521B\u5EFA\u4ED3\u5E93\u5E76\u63A8\u9001",
+        id: "gitee"
+      },
+      {
+        label: "\u23ED\uFE0F \u7A0D\u540E\u518D\u914D\uFF0C\u5148\u5B8C\u6210\u5927\u6A21\u578B\u914D\u7F6E",
+        description: "\u4EE5\u540E\u9700\u8981\u4E0A\u4F20\u8FDC\u7A0B\u4ED3\u5E93\u65F6\u53EF\u968F\u65F6\u5728\u4FA7\u8FB9\u680F\u5355\u72EC\u914D\u7F6E",
+        id: "skip"
+      }
+    ],
+    {
+      title: "\u3010\u65B0\u624B\u5411\u5BFC \u7B2C3/3\u6B65\u3011\u662F\u5426\u914D\u7F6E\u4EE3\u7801\u6258\u7BA1\u5E73\u53F0\u4EE4\u724C\uFF1F",
+      placeHolder: "\u9009\u62E9\u8981\u914D\u7F6E\u7684\u4EE3\u7801\u5E73\u53F0\uFF08\u652F\u6301\u8DF3\u8FC7\uFF09"
+    }
+  );
+  if (tokenChoice && tokenChoice.id !== "skip") {
+    const platform = tokenChoice.id;
+    const currentToken = configManager2.getToken(platform);
+    const tokenTip = platform === "github" ? "GitHub \u4EE4\u724C\u521B\u5EFA\u7F51\u5740\uFF1Ahttps://github.com/settings/tokens \uFF08\u9700\u52FE\u9009 repo \u6743\u9650\uFF09" : "Gitee \u4EE4\u724C\u521B\u5EFA\u7F51\u5740\uFF1Ahttps://gitee.com/profile/personal_access_tokens \uFF08\u9700\u52FE\u9009 projects \u6743\u9650\uFF09";
+    const platformToken = await vscode9.window.showInputBox({
+      title: `\u914D\u7F6E ${platform === "github" ? "GitHub" : "Gitee"} \u4EE4\u724C`,
+      prompt: tokenTip,
+      value: currentToken ? MASK : "",
+      password: true,
+      ignoreFocusOut: true
+    });
+    if (platformToken && platformToken !== MASK) {
+      updates[`${platform}Token`] = platformToken.trim();
+    }
+  }
+  await configManager2.saveConfig(updates);
+  const viewAction = "\u67E5\u770B\u751F\u6548\u914D\u7F6E";
+  const settingsAction = "\u6253\u5F00\u8BBE\u7F6E\u9762\u677F";
+  const notice = await vscode9.window.showInformationMessage(
+    `\u{1F389} CodeSync \u914D\u7F6E\u5DF2\u6210\u529F\u4FDD\u5B58\uFF01\u5F53\u524D\u6A21\u578B\uFF1A${finalModel}`,
+    viewAction,
+    settingsAction
+  );
+  if (notice === viewAction) {
+    await showConfigCommand(configManager2);
+  } else if (notice === settingsAction) {
+    await configManager2.openSettings();
+  }
+}
 async function setTokenCommand(configManager2) {
   const platformPick = await vscode9.window.showQuickPick(
-    PLATFORMS.map((p) => ({ label: p.label, id: p.id })),
-    { title: "\u9009\u62E9\u8981\u914D\u7F6E Token \u7684\u5E73\u53F0", placeHolder: "GitHub / Gitee / GitLab" }
+    PLATFORMS.map((p) => ({
+      label: p.label,
+      id: p.id,
+      description: p.id === "github" ? "\u9700\u8981 repo \u6743\u9650\uFF08\u8BF7\u9009 classic \u7ECF\u5178\u4EE4\u724C\uFF09" : p.id === "gitee" ? "\u9700\u8981 projects \u6743\u9650" : "\u9700\u8981 api \u6743\u9650"
+    })),
+    { title: "\u9009\u62E9\u8981\u914D\u7F6E Token \u7684\u6258\u7BA1\u5E73\u53F0", placeHolder: "GitHub / Gitee / GitLab" }
   );
   if (!platformPick)
     return;
   const platform = platformPick.id;
   const current = configManager2.getToken(platform);
+  const tip = platform === "github" ? "\u8BF7\u4F7F\u7528\u7ECF\u5178 Personal Access Token (classic) \u5E76\u52FE\u9009 repo \u6743\u9650" : platform === "gitee" ? "\u8BF7\u5728 Gitee \u8BBE\u7F6E\u4E2D\u521B\u5EFA\u79C1\u4EBA\u4EE4\u724C\u5E76\u52FE\u9009 projects \u6743\u9650" : "\u8BF7\u5728 GitLab \u4E2D\u521B\u5EFA\u4E2A\u4EBA\u8BBF\u95EE\u4EE4\u724C\u5E76\u52FE\u9009 api \u6743\u9650";
   const token = await vscode9.window.showInputBox({
-    title: `\u914D\u7F6E ${platformPick.label} Token`,
-    prompt: current ? "\u5DF2\u6709 Token\uFF0C\u76F4\u63A5\u56DE\u8F66\u53EF\u53D6\u6D88" : "\u7C98\u8D34 Personal Access Token",
+    title: `\u914D\u7F6E ${platformPick.label} \u8BBF\u95EE\u4EE4\u724C`,
+    prompt: tip,
     value: current ? MASK : "",
     password: true,
     ignoreFocusOut: true
   });
   if (!token || token === MASK)
     return;
-  await configManager2.saveConfig({ [`${platform}Token`]: token });
-  vscode9.window.showInformationMessage(`\u2705 ${platformPick.label} Token \u5DF2\u4FDD\u5B58\u5230 ${configManager2.configFilePath}`);
+  await configManager2.saveConfig({ [`${platform}Token`]: token.trim() });
+  vscode9.window.showInformationMessage(`\u2705 ${platformPick.label} Token \u5DF2\u4FDD\u5B58\u81F3 ${configManager2.configFilePath}`);
 }
 async function showConfigCommand(configManager2) {
   const config = configManager2.getConfig();
   const lines = [
-    "# CodeSync \u5F53\u524D\u914D\u7F6E",
+    "# \u{1F6E0}\uFE0F CodeSync \u5F53\u524D\u914D\u7F6E\u72B6\u6001",
     "",
-    `- \u914D\u7F6E\u6587\u4EF6: \`${configManager2.configFilePath}\``,
-    `- API Key: ${mask(config.apiKey)}`,
-    `- API Base: ${config.apiBase}`,
-    `- \u6A21\u578B: ${config.model}`,
-    `- \u667A\u80FD\u6A21\u578B\u9009\u62E9: ${config.smartModel ? "\u5F00\u542F" : "\u5173\u95ED"}`,
-    `  - \u5FEB\u901F\u6A21\u578B: ${config.fastModel}`,
-    `  - \u5F3A\u5927\u6A21\u578B: ${config.powerfulModel}`,
-    `- \u63D0\u4EA4\u89C4\u8303: ${config.convention}`,
-    `- \u63D0\u4EA4\u8BED\u8A00: ${config.language}`,
-    `- \u7F13\u5B58: ${config.enableCache ? "\u5F00\u542F" : "\u5173\u95ED"}\uFF08TTL ${config.cacheTTL}ms\uFF09`,
+    "> **\u6E29\u99A8\u63D0\u793A**\uFF1ACodeSync \u91C7\u7528\u7EDF\u4E00\u5171\u4EAB\u914D\u7F6E\u673A\u5236\u3002CLI \u7EC8\u7AEF\u3001\u684C\u9762\u5BA2\u6237\u7AEF\u4E0E VS Code \u63D2\u4EF6\u5747\u5171\u7528\u6B64\u914D\u7F6E\u3002",
     "",
-    "## \u5E73\u53F0 Token",
+    "## 1. \u57FA\u7840\u4FE1\u606F",
+    `- \u7EDF\u4E00\u914D\u7F6E\u6587\u4EF6\u8DEF\u5F84: \`${configManager2.configFilePath}\``,
+    `- \u5F53\u524D\u5927\u6A21\u578B API Key: \`${mask(config.apiKey)}\``,
+    `- \u63A5\u53E3\u5730\u5740 (API Base): \`${config.apiBase || "(\u672A\u8BBE\u7F6E\uFF0C\u4F7F\u7528\u9ED8\u8BA4\u5730\u5740)"}\``,
+    `- \u5F53\u524D\u9009\u7528\u6A21\u578B: \`${config.model}\``,
+    `- \u667A\u80FD\u6A21\u578B\u81EA\u9002\u5E94: \`${config.smartModel ? "\u5DF2\u5F00\u542F" : "\u5DF2\u5173\u95ED"}\``,
+    `  - \u5FEB\u901F\u6A21\u578B: \`${config.fastModel}\``,
+    `  - \u5F3A\u5927\u6A21\u578B: \`${config.powerfulModel}\``,
+    `- \u63D0\u4EA4\u4FE1\u606F\u89C4\u8303: \`${config.convention}\``,
+    `- \u63D0\u4EA4\u8BED\u8A00: \`${config.language}\``,
+    `- \u672C\u5730\u7F13\u5B58: \`${config.enableCache ? "\u5DF2\u5F00\u542F" : "\u5DF2\u5173\u95ED"}\` (\u7F13\u5B58\u6709\u6548\u65F6\u957F: ${config.cacheTTL} \u6BEB\u79D2)`,
     "",
-    `- GitHub: ${mask(config.githubToken)}`,
-    `- Gitee: ${mask(config.giteeToken)}`,
-    `- GitLab: ${mask(config.gitlabToken)}`,
-    `- GitLab API: ${config.gitlabBase}`
+    "## 2. \u6258\u7BA1\u5E73\u53F0\u4EE4\u724C\u72B6\u6001 (\u7528\u4E8E\u4E00\u952E\u5EFA\u4ED3\u4E0E\u4E0A\u4F20\u63A8\u9001)",
+    `- GitHub \u4EE4\u724C: \`${mask(config.githubToken)}\``,
+    `- Gitee \u7801\u4E91\u4EE4\u724C: \`${mask(config.giteeToken)}\``,
+    `- GitLab \u4EE4\u724C: \`${mask(config.gitlabToken)}\``,
+    `- GitLab \u670D\u52A1\u5730\u5740: \`${config.gitlabBase}\``,
+    "",
+    "---",
+    "### \u{1F4A1} \u5FEB\u6377\u4FEE\u6539\u65B9\u6CD5\uFF1A",
+    "1. \u4FA7\u8FB9\u680F\u70B9\u51FB **\u3010\u4E00\u952E\u914D\u7F6E\u5411\u5BFC\u3011** \u8FDB\u884C\u50BB\u74DC\u5F0F\u5F15\u5BFC\u914D\u7F6E\uFF1B",
+    "2. \u5FEB\u6377\u952E `Ctrl + ,` \u641C\u7D22 `codesync` \u6253\u5F00\u56FE\u5F62\u5316\u8BBE\u7F6E\u9875\u9762\u76F4\u63A5\u4FEE\u6539\uFF1B",
+    "3. \u5728\u7EC8\u7AEF\u8FD0\u884C\u547D\u4EE4\u884C\u5DE5\u5177\u4FEE\u6539\uFF1A`codesync config set apiKey=\u4F60\u7684Key`\u3002"
   ];
   const doc = await vscode9.workspace.openTextDocument({
     content: lines.join("\n"),
+    language: "markdown"
+  });
+  await vscode9.window.showTextDocument(doc);
+}
+async function openGuideCommand() {
+  const guideContent = `# \u{1F4D6} CodeSync \u65B0\u624B\u4F7F\u7528\u4E0E\u914D\u7F6E\u5B8C\u5168\u6307\u5357
+
+\u6B22\u8FCE\u4F7F\u7528 **CodeSync**\uFF01\u672C\u5DE5\u5177\u4E13\u4E3A\u5F00\u53D1\u8005\u8BBE\u8BA1\uFF0C\u63D0\u4F9B\u4E00\u952E\u5EFA\u4ED3\u4E0A\u4F20\u3001AI \u81EA\u52A8\u751F\u6210\u89C4\u8303\u63D0\u4EA4\u4FE1\u606F\u3001\u4EE3\u7801\u8BC4\u5BA1\u4E0E\u6CE8\u91CA\u7B49\u529F\u80FD\u3002
+\u65E0\u8BBA\u60A8\u4F7F\u7528\u7684\u662F\u547D\u4EE4\u884C\u5DE5\u5177\u3001\u684C\u9762\u7AEF\u8FD8\u662F\u5F53\u524D VS Code \u63D2\u4EF6\uFF0C\u6240\u6709\u914D\u7F6E\u90FD\u662F**\u5168\u81EA\u52A8\u901A\u7528\u5171\u4EAB**\u7684\u3002
+
+---
+
+## \u{1F3AF} \u76EE\u5F55
+1. [\u96F6\u57FA\u7840 1 \u5206\u949F\u5FEB\u901F\u914D\u7F6E\u5927\u6A21\u578B](#1-\u96F6\u57FA\u7840-1-\u5206\u949F\u5FEB\u901F\u914D\u7F6E\u5927\u6A21\u578B)
+2. [\u5E38\u7528\u529F\u80FD\u600E\u4E48\u7528\uFF1F](#2-\u5E38\u7528\u529F\u80FD\u600E\u4E48\u7528)
+3. [\u5E38\u89C1\u4EE3\u7801\u5E73\u53F0 Token \u83B7\u53D6\u6307\u5357](#3-\u5E38\u89C1\u4EE3\u7801\u5E73\u53F0-token-\u83B7\u53D6\u6307\u5357)
+4. [\u5E38\u89C1\u95EE\u9898\u89E3\u7B54\uFF08FAQ\uFF09](#4-\u5E38\u89C1\u95EE\u9898\u89E3\u7B54faq)
+
+---
+
+## 1. \u96F6\u57FA\u7840 1 \u5206\u949F\u5FEB\u901F\u914D\u7F6E\u5927\u6A21\u578B
+
+CodeSync \u751F\u6210\u63D0\u4EA4\u4FE1\u606F\u4E0E\u4EE3\u7801\u8BC4\u5BA1\u9700\u8981\u8C03\u7528\u5927\u6A21\u578B\u670D\u52A1\u3002\u6211\u4EEC\u5F3A\u70C8\u63A8\u8350\u56FD\u5185\u65B0\u624B\u4F18\u5148\u9009\u62E9**\u667A\u8C31 AI** \u6216 **DeepSeek**\uFF0C\u56FD\u5185\u7F51\u7EDC\u76F4\u8FDE\u3001\u6210\u672C\u6781\u4F4E\u4E14\u54CD\u5E94\u8FC5\u901F\u3002
+
+### \u{1F31F} \u63A8\u8350\u670D\u52A1\u5546\u53C2\u6570\u5BF9\u7167\u8868\uFF08\u76F4\u63A5\u6284\u4F5C\u4E1A\uFF09
+
+| \u670D\u52A1\u5546 | \u63A8\u8350\u6A21\u578B\u540D\u79F0 (\`model\`) | \u63A5\u53E3\u5730\u5740 (\`apiBase\`) | \u83B7\u53D6 API Key \u94FE\u63A5 |
+| :--- | :--- | :--- | :--- |
+| **\u667A\u8C31\u6E05\u8A00 (GLM)** | \`glm-4-flash\` \u6216 \`glm-4.6\` | \`https://open.bigmodel.cn/api/paas/v4/chat/completions\` | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/apikeys) |
+| **DeepSeek** | \`deepseek-chat\` | \`https://api.deepseek.com/v1\` | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
+| **\u963F\u91CC\u901A\u4E49\u5343\u95EE** | \`qwen-plus\` | \`https://dashscope.aliyuncs.com/compatible-mode/v1\` | [dashscope.console.aliyun.com](https://dashscope.console.aliyun.com/) |
+| **OpenAI (\u5B98\u65B9)** | \`gpt-4o-mini\` | \`https://api.openai.com/v1\` | [platform.openai.com](https://platform.openai.com/api-keys) |
+
+### \u{1F6E0}\uFE0F \u5982\u4F55\u914D\u7F6E\uFF1F
+- **\u6700\u5FEB\u6377\u65B9\u5F0F**\uFF1A\u5728\u5DE6\u4FA7 CodeSync \u4FA7\u8FB9\u680F\u4E2D\uFF0C\u70B9\u51FB **\u3010\u4E00\u952E\u914D\u7F6E\u5411\u5BFC\uFF08\u65B0\u624B\u63A8\u8350\uFF09\u3011**\uFF0C\u8DDF\u968F\u5F39\u7A97\u6307\u5F15\u9009\u62E9\u5382\u5546\u5E76\u7C98\u8D34 API Key \u5373\u53EF\u3002
+- **\u56FE\u5F62\u5316\u65B9\u5F0F**\uFF1A\u6309\u5FEB\u6377\u952E \`Ctrl + ,\` \u6253\u5F00\u8BBE\u7F6E\uFF0C\u641C\u7D22 \`codesync\`\uFF0C\u5728\u5BF9\u5E94\u7684\u8F93\u5165\u6846\u4E2D\u586B\u5199\u5373\u53EF\u3002
+
+---
+
+## 2. \u5E38\u7528\u529F\u80FD\u600E\u4E48\u7528\uFF1F
+
+### \u{1F680} 1. \u4E00\u952E\u4E0A\u4F20\u672C\u5730\u9879\u76EE\u5230 GitHub / Gitee
+\u65E0\u9700\u5728\u7F51\u9875\u4E0A\u624B\u52A8\u65B0\u5EFA\u4ED3\u5E93\uFF0CCodeSync \u81EA\u52A8\u5E2E\u60A8\u5EFA\u4ED3\u3001\u5173\u8054\u8FDC\u7A0B\u5E76\u63A8\u9001\uFF1A
+1. \u70B9\u51FB\u4FA7\u8FB9\u680F\u9876\u90E8 **\u3010\u4E0A\u4F20\u5230\u8FDC\u7A0B\u4ED3\u5E93\u3011**\uFF1B
+2. \u9009\u62E9\u8981\u4E0A\u4F20\u5230\u7684\u5E73\u53F0\uFF08GitHub / Gitee / GitLab\uFF09\uFF1B
+3. \u8F93\u5165\u4ED3\u5E93\u540D\u79F0\u3001\u63CF\u8FF0\uFF0C\u9009\u62E9\u516C\u5F00\uFF08Public\uFF09\u6216\u79C1\u6709\uFF08Private\uFF09\uFF1B
+4. \u63D2\u4EF6\u5C06\u5168\u81EA\u52A8\u5B8C\u6210\uFF1A\u521D\u59CB\u5316 Git -> \u751F\u6210 .gitignore -> \u6682\u5B58\u6587\u4EF6 -> AI \u751F\u6210\u9996\u6761\u63D0\u4EA4\u4FE1\u606F -> \u7F51\u9875\u5EFA\u4ED3 -> \u81EA\u52A8\u63A8\u9001\uFF01
+
+### \u{1F916} 2. AI \u667A\u80FD\u751F\u6210\u89C4\u8303\u63D0\u4EA4\u4FE1\u606F (Commit Message)
+1. \u5728 VS Code \u7684\u6E90\u4EE3\u7801\u7BA1\u7406\u9762\u677F\u4E2D\u5C06\u4FEE\u6539\u7684\u6587\u4EF6**\u6682\u5B58 (Stage)**\uFF1B
+2. \u70B9\u51FB\u4FA7\u8FB9\u680F\u7684 **\u3010\u751F\u6210\u63D0\u4EA4\u4FE1\u606F\u3011** \u6309\u94AE\uFF1B
+3. AI \u4F1A\u667A\u80FD\u5206\u6790\u60A8\u7684\u4FEE\u6539\u5DEE\u5F02 (Diff)\uFF0C\u81EA\u52A8\u751F\u6210\u7B26\u5408\u56FD\u9645\u89C4\u8303\u7684\u63D0\u4EA4\u6458\u8981\uFF1B
+4. \u5F39\u7A97\u652F\u6301\u4E8C\u6B21\u4FEE\u6539\uFF0C\u6309\u56DE\u8F66\u76F4\u63A5\u5B8C\u6210\u63D0\u4EA4\uFF01
+
+### \u{1F465} 3. \u56E2\u961F\u534F\u4F5C\u62C9\u53D6\u4E0E\u9632\u51B2\u7A81\u540C\u6B65
+- \u70B9\u51FB\u4FA7\u8FB9\u680F **\u3010\u62C9\u53D6\u56E2\u961F\u6700\u65B0\u4EE3\u7801\u3011**\uFF1A\u81EA\u52A8\u62C9\u53D6\u8FDC\u7AEF\u66F4\u65B0\uFF0C\u9632\u6B62\u4EE3\u7801\u51B2\u7A81\uFF1B
+- \u70B9\u51FB\u4FA7\u8FB9\u680F **\u3010\u63D0\u4EA4\u5E76\u534F\u540C\u63A8\u9001\u3011**\uFF1A\u4E00\u6B21\u6027\u5B8C\u6210\u201C\u6682\u5B58 -> AI \u751F\u6210\u63D0\u4EA4 -> \u63D0\u4EA4 -> \u63A8\u9001\u201D\u3002
+
+### \u{1F50D} 4. \u9009\u4E2D\u4EE3\u7801\u667A\u80FD\u89E3\u91CA\u4E0E\u8BC4\u5BA1
+\u5728\u4EE3\u7801\u7F16\u8F91\u5668\u4E2D**\u9009\u4E2D\u4EFB\u610F\u4E00\u6BB5\u4EE3\u7801**\uFF0C\u9F20\u6807\u53F3\u952E\uFF1A
+- **CodeSync: Explain Selected Code**\uFF08\u89E3\u91CA\u8FD9\u6BB5\u4EE3\u7801\u7684\u4F5C\u7528\u4E0E\u903B\u8F91\uFF09
+- **CodeSync: Annotate Selected Code**\uFF08\u4E3A\u8FD9\u6BB5\u4EE3\u7801\u81EA\u52A8\u8865\u5145\u4E2D\u6587\u6CE8\u91CA\uFF09
+- **CodeSync: Review Selected Code**\uFF08\u5BF9\u8FD9\u6BB5\u4EE3\u7801\u8FDB\u884C\u4EE3\u7801\u5BA1\u67E5\uFF0C\u627E\u51FA\u6F5C\u5728\u7F3A\u9677\u4E0E\u5B89\u5168\u9690\u60A3\uFF09
+
+---
+
+## 3. \u5E38\u89C1\u4EE3\u7801\u5E73\u53F0 Token \u83B7\u53D6\u6307\u5357
+
+\u5982\u679C\u60A8\u9700\u8981\u4F7F\u7528\u201C\u4E00\u952E\u5EFA\u4ED3\u4E0A\u4F20\u201D\u529F\u80FD\uFF0C\u5FC5\u987B\u5411\u63D2\u4EF6\u63D0\u4F9B\u5BF9\u5E94\u5E73\u53F0\u7684\u4E2A\u4EBA\u8BBF\u95EE\u4EE4\u724C\uFF08Token\uFF09\u3002
+
+### \u{1F419} GitHub \u4E2A\u4EBA\u4EE4\u724C (Personal Access Token)
+1. \u6253\u5F00\u7F51\u9875\uFF1A[https://github.com/settings/tokens](https://github.com/settings/tokens)
+2. \u70B9\u51FB\u53F3\u4E0A\u89D2 **Generate new token**\uFF0C\u9009\u62E9 **Generate new token (classic)**\uFF08\u7ECF\u5178\u4EE4\u724C\uFF0C\u5207\u52FF\u9009\u62E9\u7EC6\u7C92\u5EA6\u4EE4\u724C\uFF09\uFF1B
+3. **Note**\uFF08\u5907\u6CE8\uFF09\u968F\u4FBF\u586B\uFF0C\u6BD4\u5982 \`codesync\`\uFF1B
+4. **Expiration**\uFF08\u6709\u6548\u671F\uFF09\u53EF\u6839\u636E\u9700\u8981\u9009\u62E9 90 \u5929\u6216\u6C38\u4E0D\u8FC7\u671F\uFF1B
+5. **\u6743\u9650\u52FE\u9009**\uFF1A\u52FE\u9009\u6700\u4E0A\u65B9\u7684 **\`repo\`**\uFF08\u5305\u542B repo:status, repo_deployment, public_repo \u7B49\u5168\u90E8\u4ED3\u5E93\u6743\u9650\uFF09\uFF1B
+6. \u6ED1\u52A8\u5230\u5E95\u90E8\u70B9\u51FB\u7EFF\u8272\u6309\u94AE **Generate token**\uFF1B
+7. \u590D\u5236\u751F\u6210\u7684 \`ghp_xxxx\` \u683C\u5F0F\u4EE4\u724C\uFF0C\u5728 CodeSync \u4FA7\u8FB9\u680F\u70B9\u51FB **\u3010\u914D\u7F6E\u5E73\u53F0 Token\u3011** \u7C98\u8D34\u4FDD\u5B58\u3002
+
+### \u{1F98A} Gitee \u7801\u4E91\u79C1\u4EBA\u4EE4\u724C
+1. \u6253\u5F00\u7F51\u9875\uFF1A[https://gitee.com/profile/personal_access_tokens](https://gitee.com/profile/personal_access_tokens)
+2. \u70B9\u51FB\u53F3\u4E0A\u89D2 **\u751F\u6210\u65B0 Token**\uFF1B
+3. \u4EE4\u724C\u63CF\u8FF0\u586B\u5199 \`codesync\`\uFF1B
+4. **\u6743\u9650\u52FE\u9009**\uFF1A\u52FE\u9009 **\`projects\`**\uFF08\u9879\u76EE\u76F8\u5173\u7684\u8BFB\u5199\u6743\u9650\uFF09\uFF1B
+5. \u70B9\u51FB\u63D0\u4EA4\uFF0C\u8F93\u5165\u5BC6\u7801\u540E\u590D\u5236\u751F\u6210\u7684 Token \u5E76\u4FDD\u5B58\u81F3 CodeSync \u4E2D\u3002
+
+---
+
+## 4. \u5E38\u89C1\u95EE\u9898\u89E3\u7B54\uFF08FAQ\uFF09
+
+### Q1: \u63D0\u793A "CodeSync API Key \u672A\u914D\u7F6E" \u6216\u5927\u6A21\u578B\u8FDE\u63A5\u5931\u8D25\uFF1F
+- \u8BF7\u68C0\u67E5\u60A8\u7684 API Key \u662F\u5426\u586B\u5199\u6B63\u786E\uFF1B
+- \u5982\u679C\u4F7F\u7528\u7684\u662F\u56FD\u5185\u4E2D\u8F6C\u6216\u517C\u5BB9\u63A5\u53E3\uFF0C\u8BF7\u52A1\u5FC5\u6838\u5BF9 **API Base URL** \u662F\u5426\u5B8C\u6574\u586B\u5199\uFF0C\u4E0D\u80FD\u6709\u9057\u6F0F\u6216\u591A\u4F59\u7684\u659C\u6760\uFF1B
+- \u5982\u679C\u4F7F\u7528\u7684\u662F\u5B98\u65B9 OpenAI \u63A5\u53E3\uFF0C\u9700\u8981\u786E\u8BA4\u60A8\u7684\u7F51\u7EDC\u73AF\u5883\u662F\u5426\u53EF\u4EE5\u76F4\u8FDE\u8BBF\u95EE\u6D77\u5916\u63A5\u53E3\u3002
+
+### Q2: \u63D0\u793A GitHub \u65E0\u6CD5\u5EFA\u4ED3\u6216 401/403 \u6743\u9650\u4E0D\u8DB3\uFF1F
+- \u8BF7\u786E\u8BA4\u521B\u5EFA GitHub \u4EE4\u724C\u65F6\uFF0C\u9009\u62E9\u7684\u662F **classic\uFF08\u7ECF\u5178\u4EE4\u724C\uFF09**\uFF0C\u5E76\u4E14\u52A1\u5FC5\u52FE\u9009\u4E86 **\`repo\`** \u6743\u9650\u3002
+
+### Q3: \u4E3A\u4EC0\u4E48\u6211\u5728\u7EC8\u7AEF\u7528\u8FC7\u4E4B\u540E\uFF0C\u63D2\u4EF6\u4E0D\u9700\u8981\u91CD\u65B0\u8F93\u5165\uFF1F
+- CodeSync \u8D2F\u5F7B\u7EDF\u4E00\u914D\u7F6E\u7406\u5FF5\uFF0C\u63D2\u4EF6\u81EA\u52A8\u8BFB\u53D6\u7EC8\u7AEF\u914D\u7F6E\u7684 \`~/.git-commit-ai.json\` \u6587\u4EF6\uFF0C\u771F\u6B63\u505A\u5230\u201C\u4E00\u6B21\u914D\u7F6E\uFF0C\u591A\u7AEF\u5171\u4EAB\u201D\uFF01
+`;
+  const doc = await vscode9.workspace.openTextDocument({
+    content: guideContent,
     language: "markdown"
   });
   await vscode9.window.showTextDocument(doc);
@@ -2728,6 +3034,14 @@ function activate(context) {
     // 查看当前配置
     vscode10.commands.registerCommand("codesync.showConfig", () => {
       showConfigCommand(configManager);
+    }),
+    // 新手一键配置向导
+    vscode10.commands.registerCommand("codesync.setupWizard", () => {
+      setupWizardCommand(configManager);
+    }),
+    // 新手入门与使用指引
+    vscode10.commands.registerCommand("codesync.openGuide", () => {
+      openGuideCommand();
     })
   ];
   const gitExtension = vscode10.extensions.getExtension("vscode.git");

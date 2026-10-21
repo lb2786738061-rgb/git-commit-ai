@@ -88,47 +88,56 @@ export class CommitPanelProvider implements vscode.TreeDataProvider<CommitTreeIt
       if (!this.stagedDiff) {
         items.push(
           new CommitTreeItem(
-            '没有暂存的更改',
+            '没有暂存的更改 (暂存后可AI生成提交)',
             vscode.TreeItemCollapsibleState.None,
             { command: 'git.stage', title: '暂存更改' },
             'empty'
           )
         );
-        return items;
+      } else {
+        // 暂存区变更
+        items.push(
+          new CommitTreeItem(
+            '暂存的更改',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            undefined,
+            'files'
+          )
+        );
+
+        // AI 提交信息建议
+        if (this.suggestedCommitMessage) {
+          items.push(
+            new CommitTreeItem(
+              `建议: ${this.suggestedCommitMessage.substring(0, 50)}${
+                this.suggestedCommitMessage.length > 50 ? '...' : ''
+              }`,
+              vscode.TreeItemCollapsibleState.None,
+              { command: 'codesync.generateCommit', title: '重新生成' },
+              'suggestion'
+            )
+          );
+        } else {
+          items.push(
+            new CommitTreeItem(
+              '生成提交信息',
+              vscode.TreeItemCollapsibleState.None,
+              { command: 'codesync.generateCommit', title: '生成' },
+              'generate'
+            )
+          );
+        }
       }
 
-      // 暂存区变更
+      // 配置与使用指引（无论是否有暂存均常驻展示）
       items.push(
         new CommitTreeItem(
-          '暂存的更改',
-          vscode.TreeItemCollapsibleState.Collapsed,
+          '配置与使用指引',
+          vscode.TreeItemCollapsibleState.Expanded,
           undefined,
-          'files'
+          'settings'
         )
       );
-
-      // AI 提交信息建议
-      if (this.suggestedCommitMessage) {
-        items.push(
-          new CommitTreeItem(
-            `建议: ${this.suggestedCommitMessage.substring(0, 50)}${
-              this.suggestedCommitMessage.length > 50 ? '...' : ''
-            }`,
-            vscode.TreeItemCollapsibleState.None,
-            { command: 'codesync.generateCommit', title: '重新生成' },
-            'suggestion'
-          )
-        );
-      } else {
-        items.push(
-          new CommitTreeItem(
-            '生成提交信息',
-            vscode.TreeItemCollapsibleState.None,
-            { command: 'codesync.generateCommit', title: '生成' },
-            'generate'
-          )
-        );
-      }
 
       return items;
     } else if (element.contextValue === 'files') {
@@ -136,6 +145,39 @@ export class CommitPanelProvider implements vscode.TreeDataProvider<CommitTreeIt
         this.stagedDiff.substring(0, 500) +
         (this.stagedDiff.length > 500 ? '\n... (已截断)' : '');
       return [new CommitTreeItem(diffPreview, vscode.TreeItemCollapsibleState.None, undefined, 'diff')];
+    } else if (element.contextValue === 'settings') {
+      return [
+        new CommitTreeItem(
+          '一键配置向导（新手推荐）',
+          vscode.TreeItemCollapsibleState.None,
+          { command: 'codesync.setupWizard', title: '一键配置向导' },
+          'wizard'
+        ),
+        new CommitTreeItem(
+          '配置代码平台 Token (GitHub/Gitee)',
+          vscode.TreeItemCollapsibleState.None,
+          { command: 'codesync.setToken', title: '配置平台 Token' },
+          'key'
+        ),
+        new CommitTreeItem(
+          '打开完整设置 (API Key / URL)',
+          vscode.TreeItemCollapsibleState.None,
+          { command: 'codesync.openSettings', title: '打开完整设置' },
+          'config'
+        ),
+        new CommitTreeItem(
+          '查看当前生效配置',
+          vscode.TreeItemCollapsibleState.None,
+          { command: 'codesync.showConfig', title: '查看当前生效配置' },
+          'status'
+        ),
+        new CommitTreeItem(
+          '新手入门与使用指南',
+          vscode.TreeItemCollapsibleState.None,
+          { command: 'codesync.openGuide', title: '新手入门与使用指南' },
+          'guide'
+        )
+      ];
     }
 
     return [];

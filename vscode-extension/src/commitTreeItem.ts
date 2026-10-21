@@ -5,31 +5,32 @@ export class CommitTreeItem extends vscode.TreeItem {
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly command?: vscode.Command,
-    public readonly contextValue?: string
+    public readonly contextValue?: string,
+    iconId?: string
   ) {
     super(label, collapsibleState);
 
-    if (contextValue === 'generate') {
-      this.iconPath = new vscode.ThemeIcon('edit');
-      this.contextValue = 'generate';
-    } else if (contextValue === 'suggestion') {
-      this.iconPath = new vscode.ThemeIcon('lightbulb');
-      this.contextValue = 'suggestion';
-    } else if (contextValue === 'diff') {
-      this.iconPath = new vscode.ThemeIcon('diff');
-      this.contextValue = 'diff';
-    } else if (contextValue === 'files') {
-      this.iconPath = new vscode.ThemeIcon('files');
-      this.contextValue = 'files';
-    } else if (contextValue === 'upload') {
-      this.iconPath = new vscode.ThemeIcon('cloud-upload');
-      this.contextValue = 'upload';
-    } else if (contextValue === 'sync') {
-      this.iconPath = new vscode.ThemeIcon('sync');
-      this.contextValue = 'sync';
-    } else if (contextValue === 'empty') {
-      this.iconPath = new vscode.ThemeIcon('info');
-      this.contextValue = 'empty';
+    const icon = iconId || contextValue;
+    if (icon) {
+      const ICON_MAP: Record<string, string> = {
+        generate: 'edit',
+        suggestion: 'lightbulb',
+        diff: 'diff',
+        files: 'files',
+        upload: 'cloud-upload',
+        'cloud-download': 'cloud-download',
+        pull: 'cloud-download',
+        sync: 'sync',
+        empty: 'info',
+        settings: 'gear',
+        wizard: 'wand',
+        key: 'key',
+        guide: 'book',
+        config: 'settings-gear',
+        status: 'output'
+      };
+      const themeIconName = ICON_MAP[icon] || icon;
+      this.iconPath = new vscode.ThemeIcon(themeIconName);
     }
   }
 }

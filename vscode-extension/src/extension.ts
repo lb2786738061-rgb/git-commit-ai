@@ -6,7 +6,7 @@ import { GitService } from './gitService';
 import { uploadCommand } from './commands/upload';
 import { syncCommand } from './commands/sync';
 import { pullCommand } from './commands/pull';
-import { setTokenCommand, showConfigCommand } from './commands/config';
+import { setTokenCommand, showConfigCommand, setupWizardCommand, openGuideCommand } from './commands/config';
 
 let commitPanelProvider: CommitPanelProvider;
 let codeAssistant: CodeAssistant;
@@ -72,6 +72,16 @@ export function activate(context: vscode.ExtensionContext) {
     // 查看当前配置
     vscode.commands.registerCommand('codesync.showConfig', () => {
       showConfigCommand(configManager);
+    }),
+
+    // 新手一键配置向导
+    vscode.commands.registerCommand('codesync.setupWizard', () => {
+      setupWizardCommand(configManager);
+    }),
+
+    // 新手入门与使用指引
+    vscode.commands.registerCommand('codesync.openGuide', () => {
+      openGuideCommand();
     })
   ];
 

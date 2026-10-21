@@ -149,7 +149,32 @@ npm install
 # 编译扩展
 npm run compile
 
+# 打包为 VSIX 安装包（可选）
+npm run package
+
 # 调试运行：在 VS Code 中打开 vscode-extension 目录并按 F5
+```
+
+### 4. VS Code 插件使用与小白配置指南（零门槛）
+
+安装并启用插件后，点击 VS Code 左侧活动栏中的 **CodeSync 图标** 即可打开侧边栏。
+
+#### 💡 零基础 1 分钟配置大模型（推荐方式）
+1. 在左侧面板的 **【配置与使用指引】** 下，直接点击 **【🪄 一键配置向导（新手推荐）】**；
+2. 弹窗选择您常用的大模型提供商（推荐国内新手选择 **智谱 AI** 或 **DeepSeek**，国内直连、极速且成本极低）；
+3. 粘贴对应大模型的 **API Key**；
+4. 选择是否配置代码平台令牌（GitHub / Gitee）；
+5. 点击完成后即可开始畅快体验，**无需手动修改任何 JSON 配置文件或环境变量**！
+
+#### 🖥️ 图形化手动设置方式
+- 按快捷键 `Ctrl + ,` 打开 VS Code 设置，在搜索框输入 `codesync`；
+- 可直接配置：
+  - `codesync.apiKey`：大模型 API Key（必填，用于 AI 分析与生成）
+  - `codesync.apiBase`：大模型接口地址（如使用智谱或 DeepSeek）
+  - `codesync.model`：选用的大模型名称（如 `glm-4-flash` 或 `deepseek-chat`）
+  - `codesync.githubToken` / `giteeToken`：平台访问令牌（用于一键建仓上传）
+
+> **💡 多端通用提示**：CodeSync 采用统一共享配置设计。如果在 CLI 命令行中运行过 `codesync init` 或 `codesync config set`，VS Code 插件会自动读取该配置，**无需重复填写**！
 ```
 
 ---

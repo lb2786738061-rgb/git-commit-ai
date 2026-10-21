@@ -47,7 +47,9 @@
     "onCommand:codesync.pull",
     "onCommand:codesync.sync",
     "onCommand:codesync.setToken",
-    "onCommand:codesync.showConfig"
+    "onCommand:codesync.showConfig",
+    "onCommand:codesync.setupWizard",
+    "onCommand:codesync.openGuide"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -134,6 +136,18 @@
         "title": "Open Settings",
         "category": "CodeSync",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "codesync.setupWizard",
+        "title": "一键配置向导（新手推荐）",
+        "category": "CodeSync",
+        "icon": "$(wand)"
+      },
+      {
+        "command": "codesync.openGuide",
+        "title": "新手入门与使用指南",
+        "category": "CodeSync",
+        "icon": "$(book)"
       }
     ],
     "menus": {
@@ -176,19 +190,29 @@
           "group": "navigation@3"
         },
         {
-          "command": "codesync.setToken",
+          "command": "codesync.setupWizard",
           "when": "view == codesync.commitPanel",
           "group": "1_config@1"
         },
         {
-          "command": "codesync.showConfig",
+          "command": "codesync.setToken",
           "when": "view == codesync.commitPanel",
           "group": "1_config@2"
         },
         {
-          "command": "codesync.openSettings",
+          "command": "codesync.showConfig",
           "when": "view == codesync.commitPanel",
           "group": "1_config@3"
+        },
+        {
+          "command": "codesync.openSettings",
+          "when": "view == codesync.commitPanel",
+          "group": "1_config@4"
+        },
+        {
+          "command": "codesync.openGuide",
+          "when": "view == codesync.commitPanel",
+          "group": "1_config@5"
         }
       ],
       "view/item/context": [
