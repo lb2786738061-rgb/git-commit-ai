@@ -12,6 +12,8 @@
     "install:cli": "cd cli && npm install",
     "install:desktop": "cd desktop && npm install",
     "link:cli": "cd cli && npm link",
+    "desktop:dev": "cd desktop && npm run dev",
+    "desktop:start": "cd desktop && npm start",
     "test": "node run-tests.js"
   },
   "keywords": [

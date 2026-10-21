@@ -125,12 +125,18 @@ codesync --version
 
 ### 2. 桌面客户端开发与运行
 
+> **注意**：必须在本项目根目录下执行以下命令。
+
 ```bash
-# 安装桌面端依赖
+# 1. 确保终端处于当前项目根目录
+cd e:\projects\git-commit-ai
+
+# 2. 安装桌面端依赖
 npm run install:desktop
 
-# 启动开发环境
-cd desktop && npm run dev
+# 3. 启动开发环境
+npm run desktop:dev
+# 或进入子目录运行：cd desktop && npm run dev
 ```
 
 ### 3. VS Code 插件开发与安装

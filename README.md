@@ -133,13 +133,17 @@ codesync --version
 ```
 
 ### Desktop app
-
+ 
 ```bash
+# Ensure you are in the project root directory
+cd git-commit-ai
+
 # Install desktop dependencies
 npm run install:desktop
 
 # Start in development mode
-cd desktop && npm run dev
+npm run desktop:dev
+# or: cd desktop && npm run dev
 ```
 
 ### VS Code extension
