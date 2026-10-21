@@ -60,15 +60,24 @@ function navigateTo(page) {
 
 function el(tag, attrs = {}, ...children) {
   const elem = document.createElement(tag);
+  if (typeof attrs === 'string') {
+    attrs = { class: attrs };
+  } else if (!attrs || typeof attrs !== 'object' || (attrs instanceof Node)) {
+    if (attrs instanceof Node) children.unshift(attrs);
+    attrs = {};
+  }
   for (const [key, val] of Object.entries(attrs)) {
     if (key === 'class') elem.className = val;
     else if (key === 'style' && typeof val === 'object') Object.assign(elem.style, val);
-    else if (key.startsWith('on')) elem.addEventListener(key.slice(2).toLowerCase(), val);
-    else elem.setAttribute(key, val);
+    else if (key.startsWith('on') && typeof val === 'function') elem.addEventListener(key.slice(2).toLowerCase(), val);
+    else if (val !== undefined && val !== null) elem.setAttribute(key, val);
   }
   for (const child of children) {
-    if (typeof child === 'string') elem.appendChild(document.createTextNode(child));
-    else if (child) elem.appendChild(child);
+    if (typeof child === 'string' || typeof child === 'number') {
+      elem.appendChild(document.createTextNode(String(child)));
+    } else if (child instanceof Node) {
+      elem.appendChild(child);
+    }
   }
   return elem;
 }
@@ -119,9 +128,29 @@ function createSpinner() {
 function renderUploadPage(container) {
   container.appendChild(createPageHeader('上传项目', '将当前项目上传到 GitHub / Gitee / GitLab 远程仓库'));
 
-  const pathInput = el('input', { class: 'form-input', placeholder: '当前目录', value: '' });
-  const nameInput = el('input', { class: 'form-input', placeholder: '自动检测项目名称' });
-  const descInput = el('input', 'form-input', { class: 'form-input', placeholder: '仓库描述（可选）' });
+  const pathInput = el('input', { class: 'form-input', placeholder: '留空默认当前目录，或点击右侧选择', value: '' });
+  const selectDirBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectDir();
+        if (selected) {
+          pathInput.value = selected;
+        }
+      } catch (e) {
+        showToast('选择目录失败: ' + e.message, 'error');
+      }
+    }
+  }, '📁 浏览目录');
+
+  const pathRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+    pathInput,
+    selectDirBtn
+  );
+
+  const nameInput = el('input', { class: 'form-input', placeholder: '自动检测项目名称（可选）' });
+  const descInput = el('input', { class: 'form-input', placeholder: '仓库描述（可选）' });
   const platformSelect = el('select', { class: 'form-select' },
     el('option', { value: 'github' }, 'GitHub'),
     el('option', { value: 'gitee' }, 'Gitee'),
@@ -132,7 +161,7 @@ function renderUploadPage(container) {
   const logOutput = el('div', { class: 'output-log' }, '等待操作...');
 
   container.appendChild(createCard('📦 上传配置',
-    createFormGroup('项目路径', pathInput),
+    createFormGroup('项目路径', pathRow),
     el('div', { class: 'form-row' },
       el('div', { class: 'form-group' },
         el('label', { class: 'form-label' }, '仓库名称'),
@@ -190,13 +219,33 @@ function renderDownloadPage(container) {
   container.appendChild(createPageHeader('下载项目', '从远程仓库克隆项目到本地'));
 
   const urlInput = el('input', { class: 'form-input', placeholder: 'https://github.com/user/repo.git' });
-  const pathInput = el('input', { class: 'form-input', placeholder: '当前目录' });
+  const pathInput = el('input', { class: 'form-input', placeholder: '留空默认当前目录，或点击右侧选择' });
+  const selectDirBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectDir();
+        if (selected) {
+          pathInput.value = selected;
+        }
+      } catch (e) {
+        showToast('选择目录失败: ' + e.message, 'error');
+      }
+    }
+  }, '📁 浏览目录');
+
+  const pathRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+    pathInput,
+    selectDirBtn
+  );
+
   const installToggle = el('input', { type: 'checkbox', id: 'install-toggle' });
   const logOutput = el('div', { class: 'output-log' }, '等待操作...');
 
   container.appendChild(createCard('📥 下载配置',
     createFormGroup('仓库 URL', urlInput),
-    createFormGroup('下载路径', pathInput),
+    createFormGroup('下载路径', pathRow),
     el('div', { class: 'toggle-group' },
       el('div', { class: 'toggle-info' },
         el('div', { class: 'toggle-title' }, '自动安装依赖'),
@@ -211,7 +260,6 @@ function renderDownloadPage(container) {
       createButton('开始下载', () => handleDownload())
     )
   ));
-
   container.appendChild(createCard('📋 操作日志', logOutput));
 
   async function handleDownload() {
