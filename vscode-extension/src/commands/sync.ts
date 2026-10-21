@@ -86,19 +86,23 @@ export async function syncCommand(gitService: GitService, configManager: ConfigM
 
     if (result.committed) {
       const action = await vscode.window.showInformationMessage(
-        `✅ 已提交并推送到 ${result.branch} 分支`,
+        `✅ 协同同步成功：已自动融合远程最新代码并推送到 ${result.branch} 分支`,
         '查看提交'
       );
       if (action === '查看提交') {
         await vscode.commands.executeCommand('git.viewHistory');
       }
+    } else if (result.pulled) {
+      vscode.window.showInformationMessage(`✅ 已成功拉取团队最新代码（分支: ${result.branch || '当前分支'}）`);
     } else {
-      vscode.window.showInformationMessage('没有需要提交的更改');
+      vscode.window.showInformationMessage('当前工作区已是最新，无待同步项');
     }
   } catch (error: any) {
     const message = error?.message || String(error);
     if (message.includes('API Key')) {
       await configManager.showNoConfigWarning();
+    } else if (message.includes('多人代码冲突') || error?.isConflict) {
+      vscode.window.showErrorMessage(message, { modal: true });
     } else {
       vscode.window.showErrorMessage(`同步失败: ${message}`);
     }

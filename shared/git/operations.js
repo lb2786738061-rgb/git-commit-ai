@@ -158,13 +158,68 @@ export class GitOperations {
 
   /**
    * 拉取远程更新
+   * @param {string} [remote] 远程仓库名称
+   * @param {string} [branch] 分支名称
    */
-  async pull() {
+  async pull(remote, branch) {
     try {
-      execFileSync('git', ['pull'], { cwd: this.projectPath, stdio: 'pipe' });
-      return true;
+      const args = ['pull'];
+      if (remote) args.push(remote);
+      if (branch) args.push(branch);
+      const output = execFileSync('git', args, {
+        cwd: this.projectPath,
+        stdio: 'pipe',
+        maxBuffer: DEFAULT_MAX_BUFFER
+      });
+      return output.toString();
     } catch (error) {
-      throw new Error(`拉取失败: ${error.message}`);
+      const stderr = error.stderr ? error.stderr.toString() : '';
+      const stdout = error.stdout ? error.stdout.toString() : '';
+      const combined = (error.message || '') + '\n' + stderr + '\n' + stdout;
+      if (combined.includes('CONFLICT') || combined.includes('Automatic merge failed')) {
+        const conflictErr = new Error(`拉取冲突: 远程与本地存在代码冲突，请合并后再推送。\n${stderr || stdout}`);
+        conflictErr.isConflict = true;
+        throw conflictErr;
+      }
+      throw new Error(`拉取失败: ${stderr || error.message}`);
+    }
+  }
+
+  /**
+   * 获取当前处于冲突状态的文件列表
+   * @returns {string[]} 冲突文件相对路径列表
+   */
+  async getConflictFiles() {
+    try {
+      const output = execFileSync('git', ['diff', '--name-only', '--diff-filter=U'], {
+        cwd: this.projectPath,
+        stdio: 'pipe'
+      });
+      return output.toString().trim().split('\n').map(s => s.trim()).filter(Boolean);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /**
+   * 获取冲突差异内容供 AI 智能体分析
+   * @param {string[]} [files]
+   * @returns {string}
+   */
+  async getConflictDiff(files = []) {
+    try {
+      const args = ['diff'];
+      if (files.length > 0) {
+        args.push('--', ...files);
+      }
+      const output = execFileSync('git', args, {
+        cwd: this.projectPath,
+        stdio: 'pipe',
+        maxBuffer: DEFAULT_MAX_BUFFER
+      });
+      return output.toString();
+    } catch (_) {
+      return '';
     }
   }
 

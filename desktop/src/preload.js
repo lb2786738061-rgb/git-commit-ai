@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   uploadProject: (options) => ipcRenderer.invoke('project:upload', options),
   downloadProject: (options) => ipcRenderer.invoke('project:download', options),
+  pullProject: (options) => ipcRenderer.invoke('project:pull', options),
+  syncProject: (options) => ipcRenderer.invoke('project:sync', options),
   onUploadProgress: (callback) => {
     const listener = (event, data) => callback(data);
     ipcRenderer.on('upload:progress', listener);
@@ -34,6 +36,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = (event, data) => callback(data);
     ipcRenderer.on('download:progress', listener);
     return () => ipcRenderer.removeListener('download:progress', listener);
+  },
+  onPullProgress: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('pull:progress', listener);
+    return () => ipcRenderer.removeListener('pull:progress', listener);
+  },
+  onSyncProgress: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('sync:progress', listener);
+    return () => ipcRenderer.removeListener('sync:progress', listener);
   },
 
   aiAnnotate: (options) => ipcRenderer.invoke('ai:analyze', options),

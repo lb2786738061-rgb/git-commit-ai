@@ -449,8 +449,9 @@ codesync release 2.0.0
 | --- | --- | --- |
 | **基础操作** | `codesync upload` | 一键初始化、建仓、提交并上传本地项目 |
 | | `codesync download <url>` | 极速克隆项目并可选自动安装依赖 |
-| | `codesync update` | 增量拉取与同步远程最新改动 |
+| | `codesync update` | 增量拉取团队最新改动（遇冲突自动唤醒 AI 智能体分析） |
 | | `codesync push` | 暂存所有变更、AI 生成说明、提交并推送 |
+| | `codesync sync` | 一键协同同步（AI 提交 + 自动拉取远程融合 + 推送远端） |
 | **AI 助手** | `codesync ai commit` | 分析本地 Diff 差异，由 AI 生成标准提交说明 |
 | | `codesync ai annotate -f <file>` | 为指定代码文件生成高质量中文注释 |
 | | `codesync ai explain -f <file>` | 深度解析代码整体结构与业务执行流 |

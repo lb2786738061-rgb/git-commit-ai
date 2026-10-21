@@ -44,6 +44,7 @@
     "onCommand:codesync.annotateCode",
     "onCommand:codesync.reviewCode",
     "onCommand:codesync.upload",
+    "onCommand:codesync.pull",
     "onCommand:codesync.sync",
     "onCommand:codesync.setToken",
     "onCommand:codesync.showConfig"
@@ -97,6 +98,12 @@
         "title": "Upload Project to Remote Repository",
         "category": "CodeSync",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "codesync.pull",
+        "title": "Pull Latest Team Changes",
+        "category": "CodeSync",
+        "icon": "$(cloud-download)"
       },
       {
         "command": "codesync.sync",
@@ -154,9 +161,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "codesync.sync",
+          "command": "codesync.pull",
           "when": "view == codesync.commitPanel",
           "group": "navigation@2"
+        },
+        {
+          "command": "codesync.sync",
+          "when": "view == codesync.commitPanel",
+          "group": "navigation@3"
         },
         {
           "command": "codesync.refreshDiff",

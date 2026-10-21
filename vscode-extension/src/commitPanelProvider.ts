@@ -65,12 +65,22 @@ export class CommitPanelProvider implements vscode.TreeDataProvider<CommitTreeIt
         )
       );
 
-      // 提交并推送
+      // 拉取远程代码
       items.push(
         new CommitTreeItem(
-          '提交并推送',
+          '拉取团队最新代码',
           vscode.TreeItemCollapsibleState.None,
-          { command: 'codesync.sync', title: '提交并推送' },
+          { command: 'codesync.pull', title: '拉取团队最新代码' },
+          'cloud-download'
+        )
+      );
+
+      // 提交并协同推送
+      items.push(
+        new CommitTreeItem(
+          '提交并协同推送',
+          vscode.TreeItemCollapsibleState.None,
+          { command: 'codesync.sync', title: '提交并协同推送' },
           'sync'
         )
       );

@@ -5,6 +5,7 @@ import { ConfigManager } from './configManager';
 import { GitService } from './gitService';
 import { uploadCommand } from './commands/upload';
 import { syncCommand } from './commands/sync';
+import { pullCommand } from './commands/pull';
 import { setTokenCommand, showConfigCommand } from './commands/config';
 
 let commitPanelProvider: CommitPanelProvider;
@@ -53,7 +54,12 @@ export function activate(context: vscode.ExtensionContext) {
       uploadCommand(gitService, configManager);
     }),
 
-    // 提交并推送
+    // 拉取远程团队最新代码（多人协作防冲突）
+    vscode.commands.registerCommand('codesync.pull', () => {
+      pullCommand(gitService, configManager);
+    }),
+
+    // 提交并协同推送
     vscode.commands.registerCommand('codesync.sync', () => {
       syncCommand(gitService, configManager);
     }),

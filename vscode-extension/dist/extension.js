@@ -321,12 +321,9 @@ async function generateCommitMessage(diff, detectedScope = "") {
     return cached;
   }
   const selectedModel = selectSmartModel(diff, config);
-  let apiBase = config.apiBase.trim();
-  if (apiBase.endsWith("/")) {
-    apiBase = apiBase.slice(0, -1);
-  }
-  const url = `${apiBase}/chat/completions`;
-  try {
+  let apiBase = (config.apiBase || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
+  const url = apiBase.endsWith("/chat/completions") ? apiBase : `${apiBase}/chat/completions`;
+  async function doRequest(modelToUse) {
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -334,10 +331,10 @@ async function generateCommitMessage(diff, detectedScope = "") {
         "Authorization": `Bearer ${config.apiKey}`
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: modelToUse,
         messages: [
           { role: "system", content: getSystemPrompt(config.convention, config.language) },
-          { role: "user", content: createUserPrompt(diff, detectedScope, config.convention) }
+          { role: "user", content: createUserPrompt(diff.length > 25e3 ? diff.slice(0, 25e3) + "\n...[diff truncated for length]" : diff, detectedScope, config.convention) }
         ],
         temperature: 0.2
       })
@@ -354,7 +351,19 @@ async function generateCommitMessage(diff, detectedScope = "") {
     if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
       throw new Error("Invalid response structure received from the API.");
     }
-    const result = cleanResponse(data.choices[0].message.content);
+    return cleanResponse(data.choices[0].message.content);
+  }
+  try {
+    let result;
+    try {
+      result = await doRequest(selectedModel);
+    } catch (primaryError) {
+      if (config.model && selectedModel !== config.model) {
+        result = await doRequest(config.model);
+      } else {
+        throw primaryError;
+      }
+    }
     setCache(cacheKey, result);
     return result;
   } catch (error) {
@@ -526,10 +535,13 @@ var init_configManager = __esm({
 });
 
 // ../shared/git/operations.js
-var import_child_process, GitOperations;
+var import_child_process, import_path3, import_fs3, DEFAULT_MAX_BUFFER, GitOperations;
 var init_operations = __esm({
   "../shared/git/operations.js"() {
     import_child_process = require("child_process");
+    import_path3 = __toESM(require("path"), 1);
+    import_fs3 = __toESM(require("fs"), 1);
+    DEFAULT_MAX_BUFFER = 50 * 1024 * 1024;
     GitOperations = class {
       constructor(projectPath) {
         this.projectPath = projectPath;
@@ -550,10 +562,15 @@ var init_operations = __esm({
        */
       async addAll() {
         try {
-          (0, import_child_process.execFileSync)("git", ["add", "."], { cwd: this.projectPath, stdio: "pipe" });
+          (0, import_child_process.execFileSync)("git", ["add", "-A"], {
+            cwd: this.projectPath,
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
+          });
           return true;
         } catch (error) {
-          throw new Error(`\u6DFB\u52A0\u6587\u4EF6\u5931\u8D25: ${error.message}`);
+          const detail = error.stderr ? error.stderr.toString().trim() : error.message;
+          throw new Error(`\u6DFB\u52A0\u6587\u4EF6\u5931\u8D25: ${detail}`);
         }
       }
       /**
@@ -568,12 +585,34 @@ var init_operations = __esm({
         }
       }
       /**
+       * 确保存在 Git 用户名和邮箱配置
+       */
+      ensureGitUser() {
+        try {
+          (0, import_child_process.execFileSync)("git", ["config", "user.name"], { cwd: this.projectPath, stdio: "pipe" });
+        } catch (_) {
+          try {
+            (0, import_child_process.execFileSync)("git", ["config", "user.name", "CodeSync User"], { cwd: this.projectPath, stdio: "pipe" });
+          } catch (_2) {
+          }
+        }
+        try {
+          (0, import_child_process.execFileSync)("git", ["config", "user.email"], { cwd: this.projectPath, stdio: "pipe" });
+        } catch (_) {
+          try {
+            (0, import_child_process.execFileSync)("git", ["config", "user.email", "codesync@example.com"], { cwd: this.projectPath, stdio: "pipe" });
+          } catch (_2) {
+          }
+        }
+      }
+      /**
        * 提交更改
        * @param {string} message 提交信息
        * @param {object} [options] 选项
        * @param {boolean} [options.bypassHooks=false] 是否跳过 Git 钩子校验
        */
       async commit(message, options = {}) {
+        this.ensureGitUser();
         const { bypassHooks = false } = options;
         try {
           const args = ["commit"];
@@ -584,11 +623,30 @@ var init_operations = __esm({
           (0, import_child_process.execFileSync)("git", args, {
             cwd: this.projectPath,
             stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER,
             env: { ...process.env, GCA_BYPASS_HOOK: bypassHooks ? "1" : "0" }
           });
           return true;
         } catch (error) {
-          throw new Error(`\u63D0\u4EA4\u5931\u8D25: ${error.message}`);
+          const stderr = error.stderr ? error.stderr.toString().trim() : "";
+          const stdout = error.stdout ? error.stdout.toString().trim() : "";
+          const detail = stderr || stdout || error.message;
+          if (!bypassHooks) {
+            try {
+              (0, import_child_process.execFileSync)("git", ["commit", "--no-verify", "-m", message], {
+                cwd: this.projectPath,
+                stdio: "pipe",
+                maxBuffer: DEFAULT_MAX_BUFFER,
+                env: { ...process.env, GCA_BYPASS_HOOK: "1" }
+              });
+              return true;
+            } catch (_) {
+            }
+          }
+          if (detail.includes("nothing to commit") || detail.includes("working tree clean") || detail.includes("no changes added to commit")) {
+            return true;
+          }
+          throw new Error(`\u63D0\u4EA4\u5931\u8D25: ${detail}`);
         }
       }
       /**
@@ -621,13 +679,69 @@ var init_operations = __esm({
       }
       /**
        * 拉取远程更新
+       * @param {string} [remote] 远程仓库名称
+       * @param {string} [branch] 分支名称
        */
-      async pull() {
+      async pull(remote, branch) {
         try {
-          (0, import_child_process.execFileSync)("git", ["pull"], { cwd: this.projectPath, stdio: "pipe" });
-          return true;
+          const args = ["pull"];
+          if (remote)
+            args.push(remote);
+          if (branch)
+            args.push(branch);
+          const output = (0, import_child_process.execFileSync)("git", args, {
+            cwd: this.projectPath,
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
+          });
+          return output.toString();
         } catch (error) {
-          throw new Error(`\u62C9\u53D6\u5931\u8D25: ${error.message}`);
+          const stderr = error.stderr ? error.stderr.toString() : "";
+          const stdout = error.stdout ? error.stdout.toString() : "";
+          const combined = (error.message || "") + "\n" + stderr + "\n" + stdout;
+          if (combined.includes("CONFLICT") || combined.includes("Automatic merge failed")) {
+            const conflictErr = new Error(`\u62C9\u53D6\u51B2\u7A81: \u8FDC\u7A0B\u4E0E\u672C\u5730\u5B58\u5728\u4EE3\u7801\u51B2\u7A81\uFF0C\u8BF7\u5408\u5E76\u540E\u518D\u63A8\u9001\u3002
+${stderr || stdout}`);
+            conflictErr.isConflict = true;
+            throw conflictErr;
+          }
+          throw new Error(`\u62C9\u53D6\u5931\u8D25: ${stderr || error.message}`);
+        }
+      }
+      /**
+       * 获取当前处于冲突状态的文件列表
+       * @returns {string[]} 冲突文件相对路径列表
+       */
+      async getConflictFiles() {
+        try {
+          const output = (0, import_child_process.execFileSync)("git", ["diff", "--name-only", "--diff-filter=U"], {
+            cwd: this.projectPath,
+            stdio: "pipe"
+          });
+          return output.toString().trim().split("\n").map((s) => s.trim()).filter(Boolean);
+        } catch (_) {
+          return [];
+        }
+      }
+      /**
+       * 获取冲突差异内容供 AI 智能体分析
+       * @param {string[]} [files]
+       * @returns {string}
+       */
+      async getConflictDiff(files = []) {
+        try {
+          const args = ["diff"];
+          if (files.length > 0) {
+            args.push("--", ...files);
+          }
+          const output = (0, import_child_process.execFileSync)("git", args, {
+            cwd: this.projectPath,
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
+          });
+          return output.toString();
+        } catch (_) {
+          return "";
         }
       }
       /**
@@ -637,7 +751,8 @@ var init_operations = __esm({
         try {
           const output = (0, import_child_process.execFileSync)("git", ["status", "--porcelain"], {
             cwd: this.projectPath,
-            stdio: "pipe"
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
           });
           return output.toString();
         } catch (error) {
@@ -652,11 +767,48 @@ var init_operations = __esm({
           const output = (0, import_child_process.execFileSync)("git", ["--no-pager", "log", "-n", String(count), "--pretty=format:%h %s"], {
             cwd: this.projectPath,
             stdio: "pipe",
-            encoding: "utf-8"
+            encoding: "utf-8",
+            maxBuffer: DEFAULT_MAX_BUFFER
           });
           return output.trim().split("\n").filter((l) => l.trim());
         } catch (error) {
           throw new Error(`\u83B7\u53D6\u5386\u53F2\u5931\u8D25: ${error.message}`);
+        }
+      }
+      /**
+       * 检查是否为缓冲区溢出错误
+       */
+      isBufferOverflow(error) {
+        if (!error)
+          return false;
+        return error.code === "ENOBUFS" || error.message && (error.message.includes("ENOBUFS") || error.message.includes("maxBuffer"));
+      }
+      /**
+       * 当 diff 过大溢出时，降级获取改动统计摘要
+       */
+      getFallbackDiff(staged = true) {
+        const args = staged ? ["diff", "--cached", "--stat"] : ["diff", "--stat"];
+        try {
+          const statOutput = (0, import_child_process.execFileSync)("git", args, {
+            cwd: this.projectPath,
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
+          });
+          return `# \u9879\u76EE\u6539\u52A8\u89C4\u6A21\u8F83\u5927\uFF0C\u5DF2\u81EA\u52A8\u6C47\u603B\u53D8\u66F4\u7EDF\u8BA1\u4FE1\u606F:
+${statOutput.toString()}`;
+        } catch (_) {
+          try {
+            const nameStatusArgs = staged ? ["diff", "--cached", "--name-status"] : ["diff", "--name-status"];
+            const nameStatus = (0, import_child_process.execFileSync)("git", nameStatusArgs, {
+              cwd: this.projectPath,
+              stdio: "pipe",
+              maxBuffer: DEFAULT_MAX_BUFFER
+            });
+            return `# \u9879\u76EE\u6539\u52A8\u89C4\u6A21\u8F83\u5927\uFF0C\u5DF2\u81EA\u52A8\u63D0\u53D6\u53D8\u66F4\u6587\u4EF6\u5217\u8868:
+${nameStatus.toString()}`;
+          } catch (e) {
+            return "# \u9879\u76EE\u6539\u52A8\u89C4\u6A21\u8F83\u5927\uFF0C\u5305\u542B\u5927\u91CF\u65B0\u6587\u4EF6\u6216\u521D\u59CB\u4EE3\u7801\u63D0\u4EA4";
+          }
         }
       }
       /**
@@ -666,10 +818,14 @@ var init_operations = __esm({
         try {
           const output = (0, import_child_process.execFileSync)("git", ["diff"], {
             cwd: this.projectPath,
-            stdio: "pipe"
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
           });
           return output.toString();
         } catch (error) {
+          if (this.isBufferOverflow(error)) {
+            return this.getFallbackDiff(false);
+          }
           throw new Error(`\u83B7\u53D6 diff \u5931\u8D25: ${error.message}`);
         }
       }
@@ -680,10 +836,14 @@ var init_operations = __esm({
         try {
           const output = (0, import_child_process.execFileSync)("git", ["diff", "--cached"], {
             cwd: this.projectPath,
-            stdio: "pipe"
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
           });
           return this.filterDiff(output.toString());
         } catch (error) {
+          if (this.isBufferOverflow(error)) {
+            return this.getFallbackDiff(true);
+          }
           throw new Error(`\u83B7\u53D6\u6682\u5B58 diff \u5931\u8D25: ${error.message}`);
         }
       }
@@ -727,6 +887,18 @@ var init_operations = __esm({
           });
           return true;
         } catch (error) {
+          const errStr = (error.message || "") + (error.stderr ? error.stderr.toString() : "");
+          if (errStr.includes("already exists")) {
+            try {
+              (0, import_child_process.execFileSync)("git", ["remote", "set-url", name, url], {
+                cwd: this.projectPath,
+                stdio: "pipe"
+              });
+              return true;
+            } catch (setErr) {
+              throw new Error(`\u66F4\u65B0\u8FDC\u7A0B\u4ED3\u5E93\u5931\u8D25: ${setErr.message}`);
+            }
+          }
           throw new Error(`\u6DFB\u52A0\u8FDC\u7A0B\u4ED3\u5E93\u5931\u8D25: ${error.message}`);
         }
       }
@@ -749,11 +921,17 @@ var init_operations = __esm({
        */
       static isGitRepository(projectPath) {
         try {
-          const result = (0, import_child_process.execFileSync)("git", ["rev-parse", "--is-inside-work-tree"], {
+          const gitDir = import_path3.default.join(projectPath, ".git");
+          if (import_fs3.default.existsSync(gitDir)) {
+            return true;
+          }
+          const topLevel = (0, import_child_process.execFileSync)("git", ["rev-parse", "--show-toplevel"], {
             cwd: projectPath,
             stdio: "pipe"
-          });
-          return result.toString().trim() === "true";
+          }).toString().trim();
+          const normalTop = import_path3.default.resolve(topLevel).toLowerCase();
+          const normalProject = import_path3.default.resolve(projectPath).toLowerCase();
+          return normalTop === normalProject;
         } catch (error) {
           return false;
         }
@@ -880,7 +1058,8 @@ var init_operations = __esm({
         try {
           const output = (0, import_child_process.execFileSync)("git", ["diff", "HEAD", "--", filePath], {
             cwd: this.projectPath,
-            stdio: "pipe"
+            stdio: "pipe",
+            maxBuffer: DEFAULT_MAX_BUFFER
           });
           return output.toString();
         } catch (error) {
@@ -945,7 +1124,7 @@ var init_operations = __esm({
 // ../shared/git/gitignore.js
 function detectProjectType(projectPath) {
   try {
-    const rootEntries = import_fs3.default.readdirSync(projectPath, { withFileTypes: true });
+    const rootEntries = import_fs4.default.readdirSync(projectPath, { withFileTypes: true });
     const rootFiles = rootEntries.filter((e) => e.isFile()).map((e) => e.name);
     const rootDirs = rootEntries.filter((e) => e.isDirectory()).map((e) => e.name);
     for (const detector of DETECTORS) {
@@ -963,9 +1142,9 @@ function detectProjectType(projectPath) {
     const checkDirs = ["backend", "frontend", "src", "app", "server", "client", "lib"];
     for (const dirName of checkDirs) {
       if (rootDirs.includes(dirName)) {
-        const subPath = import_path3.default.join(projectPath, dirName);
+        const subPath = import_path4.default.join(projectPath, dirName);
         try {
-          const subEntries = import_fs3.default.readdirSync(subPath, { withFileTypes: true });
+          const subEntries = import_fs4.default.readdirSync(subPath, { withFileTypes: true });
           const subFiles = subEntries.filter((e) => e.isFile()).map((e) => e.name);
           for (const detector of DETECTORS) {
             for (const pattern of detector.files) {
@@ -991,20 +1170,20 @@ function generateGitignore(projectType) {
   return GITIGNORE_TEMPLATES[projectType] || GITIGNORE_TEMPLATES.general;
 }
 function ensureGitignore(projectPath) {
-  const gitignorePath = import_path3.default.join(projectPath, ".gitignore");
-  if (import_fs3.default.existsSync(gitignorePath)) {
+  const gitignorePath = import_path4.default.join(projectPath, ".gitignore");
+  if (import_fs4.default.existsSync(gitignorePath)) {
     return { created: false, type: "existing", path: gitignorePath };
   }
   const projectType = detectProjectType(projectPath);
   const content = generateGitignore(projectType);
-  import_fs3.default.writeFileSync(gitignorePath, content, "utf-8");
+  import_fs4.default.writeFileSync(gitignorePath, content, "utf-8");
   return { created: true, type: projectType, path: gitignorePath };
 }
-var import_fs3, import_path3, GITIGNORE_TEMPLATES, DETECTORS;
+var import_fs4, import_path4, GITIGNORE_TEMPLATES, DETECTORS;
 var init_gitignore = __esm({
   "../shared/git/gitignore.js"() {
-    import_fs3 = __toESM(require("fs"), 1);
-    import_path3 = __toESM(require("path"), 1);
+    import_fs4 = __toESM(require("fs"), 1);
+    import_path4 = __toESM(require("path"), 1);
     GITIGNORE_TEMPLATES = {
       dotnet: `# .NET \u7F16\u8BD1\u4EA7\u7269
 bin/
@@ -1214,9 +1393,10 @@ async function createGitHubRepo(repoName, description = "", isPrivate = false) {
     const response = await fetch("https://api.github.com/user/repos", {
       method: "POST",
       headers: {
-        "Authorization": `token ${token}`,
+        "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
-        "Accept": "application/vnd.github.v3+json"
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "CodeSync-App"
       },
       body: JSON.stringify({
         name: repoName,
@@ -1226,8 +1406,18 @@ async function createGitHubRepo(repoName, description = "", isPrivate = false) {
       })
     });
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "\u521B\u5EFA GitHub \u4ED3\u5E93\u5931\u8D25");
+      let errorMsg = "\u521B\u5EFA GitHub \u4ED3\u5E93\u5931\u8D25";
+      try {
+        const error = await response.json();
+        errorMsg = error.message || errorMsg;
+      } catch (_) {
+      }
+      if (errorMsg.includes("Resource not accessible by personal access token")) {
+        throw new Error(
+          'GitHub \u62D2\u7EDD\u4E86\u6B64\u4EE4\u724C\u7684\u64CD\u4F5C\u6743\u9650\u3002\u539F\u56E0\u662F\u60A8\u914D\u7F6E\u7684\u662F\u7EC6\u7C92\u5EA6\u4EE4\u724C (\u4EE5 github_pat_ \u5F00\u5934)\uFF0C\u800C GitHub \u5B98\u65B9\u7B56\u7565\u660E\u786E\u89C4\u5B9A\u3010\u4E0D\u652F\u6301\u4F7F\u7528\u7EC6\u7C92\u5EA6\u4EE4\u724C\u521B\u5EFA\u4E2A\u4EBA\u4ED3\u5E93\u3011\u3002\n\u{1F449} \u89E3\u51B3\u65B9\u6CD5\uFF1A\u8BF7\u4F7F\u7528 GitHub \u7ECF\u5178\u4EE4\u724C\u3010Personal access token (classic)\u3011\uFF1A\n   1. \u6D4F\u89C8\u5668\u8BBF\u95EE\uFF1Ahttps://github.com/settings/tokens\n   2. \u70B9\u51FB\u53F3\u4E0A\u89D2 "Generate new token" \u4E0B\u62C9\u83DC\u5355\uFF0C\u9009\u62E9 "Generate new token (classic)"\n   3. Note \u586B codesync\uFF0C\u52FE\u9009 [x] repo \u6743\u9650\uFF08\u5FC5\u987B\u52FE\u9009\u5B8C\u6574 repo\uFF09\n   4. \u751F\u6210\u4EE5 ghp_ \u5F00\u5934\u7684\u7ECF\u5178\u4EE4\u724C\n   5. \u5728\u7EC8\u7AEF\u6267\u884C\u914D\u7F6E: codesync config set githubToken=ghp_\u4F60\u7684\u65B0\u4EE4\u724C'
+        );
+      }
+      throw new Error(errorMsg);
     }
     const data = await response.json();
     return data.clone_url;
@@ -1325,6 +1515,92 @@ var init_platform = __esm({
   }
 });
 
+// ../shared/ai/conflict.js
+async function analyzeConflict(options = {}) {
+  var _a, _b, _c, _d;
+  const { conflictFiles = [], conflictDiff = "" } = options;
+  if (conflictFiles.length === 0 && !conflictDiff) {
+    return {
+      summary: "\u672A\u68C0\u6D4B\u5230\u51B2\u7A81\u5185\u5BB9",
+      files: [],
+      suggestions: "\u5F53\u524D\u5DE5\u4F5C\u533A\u4EE3\u7801\u6CA1\u6709\u5408\u5E76\u51B2\u7A81\u3002"
+    };
+  }
+  const config = readConfig();
+  if (!config.apiKey) {
+    return {
+      summary: `\u68C0\u6D4B\u5230 ${conflictFiles.length} \u4E2A\u6587\u4EF6\u5B58\u5728\u591A\u4EBA\u534F\u4F5C\u51B2\u7A81`,
+      files: conflictFiles,
+      suggestions: [
+        "\u{1F4A1} \u667A\u80FD\u4F53\u63D0\u793A\uFF1A\u8BF7\u6309\u4EE5\u4E0B\u6B65\u9AA4\u89E3\u51B3\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81\uFF1A",
+        ...conflictFiles.map((f) => `  - \u6253\u5F00\u6587\u4EF6 [${f}]\uFF0C\u641C\u7D22\u67E5\u627E <<<<<<< HEAD \u51B2\u7A81\u6807\u8BB0`),
+        "  - \u5BF9\u6BD4\u672C\u5730\u4EE3\u7801\uFF08HEAD\uFF09\u4E0E\u8FDC\u7A0B\u56E2\u961F\u4EE3\u7801\uFF08incoming\uFF09\uFF0C\u9009\u62E9\u4FDD\u7559\u6216\u5408\u5E76",
+        "  - \u5220\u9664 <<<<<<<, =======, >>>>>>> \u6807\u8BB0\u884C\u5E76\u4FDD\u5B58\u6587\u4EF6",
+        "  - \u8FD0\u884C codesync push \u6216 git add \u91CD\u65B0\u63D0\u4EA4\u5373\u53EF\u5B8C\u6210\u5408\u5E76\u3002"
+      ].join("\n")
+    };
+  }
+  const safeDiff = (conflictDiff || conflictFiles.join("\n")).slice(0, 1e4);
+  const prompt = `\u4F60\u662F\u4E00\u4E2A Git \u534F\u540C\u5F00\u53D1\u4E13\u5BB6\u4E0E\u51B2\u7A81\u5BA1\u67E5\u667A\u80FD\u4F53\u3002
+\u5F53\u524D\u56E2\u961F\u6210\u5458\u5728\u534F\u4F5C\u63A8\u9001/\u62C9\u53D6\u4EE3\u7801\u65F6\u53D1\u751F\u4E86\u5408\u5E76\u51B2\u7A81\u3002
+\u51B2\u7A81\u6587\u4EF6\u5217\u8868\uFF1A
+${conflictFiles.map((f) => `- ${f}`).join("\n")}
+
+\u51B2\u7A81\u8BE6\u60C5\u4E0E\u4EE3\u7801\u7247\u6BB5\uFF1A
+\`\`\`diff
+${safeDiff}
+\`\`\`
+
+\u8BF7\u7528\u6E05\u6670\u3001\u4E13\u4E1A\u7684\u7B80\u4F53\u4E2D\u6587\u8FDB\u884C\u5BA1\u67E5\uFF0C\u7ED9\u51FA\uFF1A
+1. \u51B2\u7A81\u6838\u5FC3\u539F\u56E0\u5206\u6790\uFF08\u672C\u5730\u4FEE\u6539\u4E0E\u8FDC\u7A0B\u4FEE\u6539\u5206\u522B\u505A\u4E86\u4EC0\u4E48\uFF09\u3002
+2. \u5177\u4F53\u89E3\u51B3\u7B56\u7565\u4E0E\u5EFA\u8BAE\uFF08\u5982\u4F55\u4FDD\u7559\u4E24\u8005\u7684\u6838\u5FC3\u903B\u8F91\uFF0C\u907F\u514D\u529F\u80FD\u4E22\u5931\uFF09\u3002
+3. \u89E3\u51B3\u51B2\u7A81\u7684\u6807\u51C6\u64CD\u4F5C\u6B65\u9AA4\u3002`;
+  try {
+    let apiBase = (config.apiBase || "https://api.openai.com/v1").replace(/\/+$/, "");
+    const endpoint = apiBase.endsWith("/chat/completions") ? apiBase : `${apiBase}/chat/completions`;
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: config.model || "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "\u4F60\u662F\u4E00\u4E2A\u4E13\u4E1A\u7684 Git \u534F\u4F5C\u51B2\u7A81\u89E3\u51B3\u52A9\u624B\uFF0C\u8BF7\u7528\u7EAF\u7B80\u4F53\u4E2D\u6587\u56DE\u7B54\u3002" },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.2
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`AI \u670D\u52A1\u8FD4\u56DE HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const suggestions = ((_d = (_c = (_b = (_a = data == null ? void 0 : data.choices) == null ? void 0 : _a[0]) == null ? void 0 : _b.message) == null ? void 0 : _c.content) == null ? void 0 : _d.trim()) || "";
+    return {
+      summary: `\u68C0\u6D4B\u5230 ${conflictFiles.length} \u4E2A\u6587\u4EF6\u5B58\u5728\u591A\u4EBA\u534F\u4F5C\u51B2\u7A81\uFF0CAI \u667A\u80FD\u4F53\u5DF2\u5B8C\u6210\u51B2\u7A81\u5206\u6790`,
+      files: conflictFiles,
+      suggestions: suggestions || "\u672A\u80FD\u751F\u6210\u5177\u4F53\u5206\u6790\u5EFA\u8BAE\uFF0C\u8BF7\u624B\u52A8\u6392\u67E5\u51B2\u7A81\u6807\u8BB0\u3002"
+    };
+  } catch (error) {
+    return {
+      summary: `\u68C0\u6D4B\u5230 ${conflictFiles.length} \u4E2A\u6587\u4EF6\u5B58\u5728\u51B2\u7A81`,
+      files: conflictFiles,
+      suggestions: [
+        `\u26A0\uFE0F AI \u667A\u80FD\u4F53\u5206\u6790\u6682\u65F6\u4E0D\u53EF\u7528 (${error.message})\uFF0C\u964D\u7EA7\u6307\u5F15\u5982\u4E0B\uFF1A`,
+        ...conflictFiles.map((f) => `  - \u8BF7\u68C0\u67E5\u6587\u4EF6 [${f}] \u4E2D\u7684\u51B2\u7A81\u6807\u8BB0\u5E76\u5408\u5E76`),
+        "  - \u6D88\u9664\u51B2\u7A81\u6807\u8BB0\u540E\u6267\u884C git add \u6682\u5B58\u5E76\u91CD\u65B0\u63A8\u9001\u3002"
+      ].join("\n")
+    };
+  }
+}
+var init_conflict = __esm({
+  "../shared/ai/conflict.js"() {
+    init_config();
+  }
+});
+
 // ../shared/git/upload.js
 async function uploadProject(options) {
   const {
@@ -1357,11 +1633,12 @@ async function uploadProject(options) {
       try {
         commitMessage = await generateCommitMessage(diff, "");
       } catch (error) {
-        console.warn("AI \u751F\u6210\u63D0\u4EA4\u4FE1\u606F\u5931\u8D25\uFF0C\u4F7F\u7528\u9ED8\u8BA4\u4FE1\u606F");
+        console.warn(`
+\u26A0\uFE0F  AI \u751F\u6210\u63D0\u4EA4\u4FE1\u606F\u5931\u8D25 (${error.message})\uFF0C\u5C06\u4F7F\u7528\u9ED8\u8BA4\u63D0\u4EA4\u4FE1\u606F`);
       }
     }
     onProgress(50, "\u63D0\u4EA4\u66F4\u6539...");
-    await git.commit(commitMessage);
+    await git.commit(commitMessage, { bypassHooks: true });
     onProgress(60, "\u8BBE\u7F6E\u5206\u652F...");
     await git.setBranch("main");
     onProgress(70, `\u5728 ${platform} \u521B\u5EFA\u4ED3\u5E93...`);
@@ -1385,6 +1662,49 @@ async function uploadProject(options) {
     throw new Error(`\u4E0A\u4F20\u5931\u8D25: ${error.message}`);
   }
 }
+async function pullProject(options) {
+  const {
+    projectPath,
+    remote = "origin",
+    onProgress = () => {
+    }
+  } = options;
+  const git = new GitOperations(projectPath);
+  if (!GitOperations.isGitRepository(projectPath)) {
+    throw new Error("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F Git \u4ED3\u5E93");
+  }
+  try {
+    onProgress(20, "\u68C0\u67E5\u5F53\u524D\u5206\u652F...");
+    const branch = await git.getCurrentBranch();
+    onProgress(50, `\u6B63\u5728\u4ECE ${remote}/${branch} \u62C9\u53D6\u8FDC\u7A0B\u6700\u65B0\u4EE3\u7801...`);
+    const output = await git.pull(remote, branch);
+    onProgress(100, "\u62C9\u53D6\u5B8C\u6210\uFF01\u5DF2\u540C\u6B65\u56E2\u961F\u6700\u65B0\u4EE3\u7801");
+    return {
+      success: true,
+      branch,
+      message: output.includes("Already up to date") ? "\u5F53\u524D\u4EE3\u7801\u5DF2\u662F\u6700\u65B0\uFF0C\u65E0\u65B0\u66F4\u65B0" : "\u5DF2\u6210\u529F\u5408\u5E76\u8FDC\u7A0B\u6700\u65B0\u4EE3\u7801"
+    };
+  } catch (error) {
+    if (error.isConflict) {
+      onProgress(85, "\u68C0\u6D4B\u5230\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81\uFF0C\u6B63\u5728\u5524\u9192 AI \u667A\u80FD\u4F53\u5206\u6790\u51B2\u7A81...");
+      const conflictFiles = await git.getConflictFiles();
+      const conflictDiff = await git.getConflictDiff(conflictFiles);
+      const aiAnalysis = await analyzeConflict({ conflictFiles, conflictDiff, projectPath });
+      const conflictErr = new Error(`\u62C9\u53D6\u51B2\u7A81: \u8FDC\u7A0B\u4E0E\u672C\u5730\u4EE3\u7801\u53D1\u751F\u51B2\u7A81\u3002
+
+\u3010\u51B2\u7A81\u6587\u4EF6\u3011:
+${conflictFiles.map((f) => " - " + f).join("\n")}
+
+\u3010AI \u667A\u80FD\u4F53\u5408\u5E76\u5EFA\u8BAE\u3011:
+${aiAnalysis.suggestions}`);
+      conflictErr.isConflict = true;
+      conflictErr.conflictFiles = conflictFiles;
+      conflictErr.aiAnalysis = aiAnalysis;
+      throw conflictErr;
+    }
+    throw new Error(`\u66F4\u65B0\u5931\u8D25: ${error.message}`);
+  }
+}
 async function syncProject(options) {
   const {
     projectPath,
@@ -1399,26 +1719,55 @@ async function syncProject(options) {
     throw new Error("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F Git \u4ED3\u5E93");
   }
   try {
-    onProgress(10, "\u6DFB\u52A0\u6587\u4EF6...");
+    onProgress(10, "\u68C0\u67E5\u672C\u5730\u6539\u52A8...");
     await git.addAll();
-    onProgress(25, "\u68C0\u67E5\u53D8\u66F4...");
     const diff = await git.getStagedDiff();
-    if (!diff || !diff.trim()) {
-      onProgress(100, "\u6CA1\u6709\u9700\u8981\u63D0\u4EA4\u7684\u66F4\u6539");
-      return { committed: false, reason: "no-changes" };
-    }
-    let commitMessage = message;
-    if (!commitMessage) {
-      onProgress(45, "\u751F\u6210\u63D0\u4EA4\u4FE1\u606F...");
-      commitMessage = await generateCommitMessage(diff, "");
-    }
-    onProgress(65, "\u63D0\u4EA4\u66F4\u6539...");
-    await git.commit(commitMessage, { bypassHooks });
-    onProgress(80, "\u63A8\u9001\u5230\u8FDC\u7A0B...");
     const branch = await git.getCurrentBranch();
-    await git.push(remote, branch);
-    onProgress(100, "\u540C\u6B65\u5B8C\u6210\uFF01");
-    return { committed: true, commitMessage, branch };
+    let committed = false;
+    let commitMessage = message;
+    if (diff && diff.trim()) {
+      if (!commitMessage) {
+        onProgress(30, "AI \u751F\u6210\u63D0\u4EA4\u4FE1\u606F...");
+        commitMessage = await generateCommitMessage(diff, "");
+      }
+      onProgress(50, "\u63D0\u4EA4\u672C\u5730\u66F4\u6539...");
+      await git.commit(commitMessage, { bypassHooks });
+      committed = true;
+    } else {
+      onProgress(40, "\u672C\u5730\u65E0\u65B0\u4FEE\u6539\uFF0C\u51C6\u5907\u62C9\u53D6\u8FDC\u7A0B\u66F4\u65B0...");
+    }
+    onProgress(70, `\u62C9\u53D6 ${remote}/${branch} \u8FDC\u7A0B\u6700\u65B0\u4EE3\u7801\u4EE5\u9632\u51B2\u7A81...`);
+    try {
+      await git.pull(remote, branch);
+    } catch (pullErr) {
+      if (pullErr.isConflict) {
+        onProgress(85, "\u68C0\u6D4B\u5230\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81\uFF0C\u6B63\u5728\u7531 AI \u667A\u80FD\u4F53\u5206\u6790\u51B2\u7A81...");
+        const conflictFiles = await git.getConflictFiles();
+        const conflictDiff = await git.getConflictDiff(conflictFiles);
+        const aiAnalysis = await analyzeConflict({ conflictFiles, conflictDiff, projectPath });
+        const conflictErr = new Error(`\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81: \u8FDC\u7A0B\u4E0E\u672C\u5730\u53D1\u751F\u91CD\u53E0\u51B2\u7A81\uFF0C\u5DF2\u63D0\u4EA4\u672C\u5730\u6682\u5B58\uFF0C\u8BF7\u89E3\u51B3\u51B2\u7A81\u540E\u63A8\u9001\u3002
+
+\u3010\u51B2\u7A81\u6587\u4EF6\u3011:
+${conflictFiles.map((f) => " - " + f).join("\n")}
+
+\u3010AI \u667A\u80FD\u4F53\u5408\u5E76\u5EFA\u8BAE\u3011:
+${aiAnalysis.suggestions}`);
+        conflictErr.isConflict = true;
+        conflictErr.conflictFiles = conflictFiles;
+        conflictErr.aiAnalysis = aiAnalysis;
+        throw conflictErr;
+      }
+      throw pullErr;
+    }
+    if (committed) {
+      onProgress(90, `\u63A8\u9001\u5230\u8FDC\u7A0B ${remote}/${branch}...`);
+      await git.push(remote, branch);
+      onProgress(100, "\u534F\u540C\u540C\u6B65\u5B8C\u6210\uFF01");
+      return { committed: true, commitMessage, branch };
+    } else {
+      onProgress(100, "\u540C\u6B65\u5B8C\u6210\uFF01\u5DF2\u6210\u529F\u62C9\u53D6\u56E2\u961F\u6700\u65B0\u4EE3\u7801");
+      return { committed: false, pulled: true, branch, reason: "already-latest" };
+    }
   } catch (error) {
     throw new Error(`\u540C\u6B65\u5931\u8D25: ${error.message}`);
   }
@@ -1429,16 +1778,17 @@ var init_upload = __esm({
     init_gitignore();
     init_platform();
     init_commit();
+    init_conflict();
   }
 });
 
 // src/gitService.ts
-var vscode5, import_path4, GitService;
+var vscode5, import_path5, GitService;
 var init_gitService = __esm({
   "src/gitService.ts"() {
     "use strict";
     vscode5 = __toESM(require("vscode"));
-    import_path4 = __toESM(require("path"));
+    import_path5 = __toESM(require("path"));
     init_operations();
     init_upload();
     init_commit();
@@ -1453,7 +1803,7 @@ var init_gitService = __esm({
         var _a, _b, _c;
         const activeUri = (_a = vscode5.window.activeTextEditor) == null ? void 0 : _a.document.uri;
         if (activeUri && activeUri.scheme === "file") {
-          return import_path4.default.dirname(activeUri.fsPath);
+          return import_path5.default.dirname(activeUri.fsPath);
         }
         return (_c = (_b = vscode5.workspace.workspaceFolders) == null ? void 0 : _b[0]) == null ? void 0 : _c.uri.fsPath;
       }
@@ -1496,7 +1846,16 @@ var init_gitService = __esm({
         });
       }
       /**
-       * 增量同步已有仓库（暂存 → 提交 → 推送）
+       * 拉取远程最新代码（多人协作防冲突）
+       */
+      async pull(options) {
+        return pullProject({
+          projectPath: options.projectPath,
+          onProgress: options.onProgress
+        });
+      }
+      /**
+       * 协同同步已有仓库（暂存 → 提交 → 融合远程最新代码 → 推送）
        * @param options 同步参数
        */
       async sync(options) {
@@ -1594,19 +1953,23 @@ async function syncCommand(gitService2, configManager2) {
     );
     if (result.committed) {
       const action = await vscode6.window.showInformationMessage(
-        `\u2705 \u5DF2\u63D0\u4EA4\u5E76\u63A8\u9001\u5230 ${result.branch} \u5206\u652F`,
+        `\u2705 \u534F\u540C\u540C\u6B65\u6210\u529F\uFF1A\u5DF2\u81EA\u52A8\u878D\u5408\u8FDC\u7A0B\u6700\u65B0\u4EE3\u7801\u5E76\u63A8\u9001\u5230 ${result.branch} \u5206\u652F`,
         "\u67E5\u770B\u63D0\u4EA4"
       );
       if (action === "\u67E5\u770B\u63D0\u4EA4") {
         await vscode6.commands.executeCommand("git.viewHistory");
       }
+    } else if (result.pulled) {
+      vscode6.window.showInformationMessage(`\u2705 \u5DF2\u6210\u529F\u62C9\u53D6\u56E2\u961F\u6700\u65B0\u4EE3\u7801\uFF08\u5206\u652F: ${result.branch || "\u5F53\u524D\u5206\u652F"}\uFF09`);
     } else {
-      vscode6.window.showInformationMessage("\u6CA1\u6709\u9700\u8981\u63D0\u4EA4\u7684\u66F4\u6539");
+      vscode6.window.showInformationMessage("\u5F53\u524D\u5DE5\u4F5C\u533A\u5DF2\u662F\u6700\u65B0\uFF0C\u65E0\u5F85\u540C\u6B65\u9879");
     }
   } catch (error) {
     const message = (error == null ? void 0 : error.message) || String(error);
     if (message.includes("API Key")) {
       await configManager2.showNoConfigWarning();
+    } else if (message.includes("\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81") || (error == null ? void 0 : error.isConflict)) {
+      vscode6.window.showErrorMessage(message, { modal: true });
     } else {
       vscode6.window.showErrorMessage(`\u540C\u6B65\u5931\u8D25: ${message}`);
     }
@@ -1661,7 +2024,7 @@ async function uploadCommand(gitService2, configManager2) {
   const platform = platformPick.id;
   const repoName = await vscode7.window.showInputBox({
     title: "\u4ED3\u5E93\u540D\u79F0",
-    value: import_path5.default.basename(projectPath),
+    value: import_path6.default.basename(projectPath),
     ignoreFocusOut: true,
     validateInput: (value) => value.trim() ? null : "\u4ED3\u5E93\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A"
   });
@@ -1744,12 +2107,12 @@ async function uploadCommand(gitService2, configManager2) {
     vscode7.window.showErrorMessage(`\u4E0A\u4F20\u5931\u8D25: ${(error == null ? void 0 : error.message) || error}`);
   }
 }
-var vscode7, import_path5;
+var vscode7, import_path6;
 var init_upload2 = __esm({
   "src/commands/upload.ts"() {
     "use strict";
     vscode7 = __toESM(require("vscode"));
-    import_path5 = __toESM(require("path"));
+    import_path6 = __toESM(require("path"));
     init_gitService();
     init_configManager();
     init_sync();
@@ -1763,7 +2126,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode9 = __toESM(require("vscode"));
+var vscode10 = __toESM(require("vscode"));
 
 // src/commitPanelProvider.ts
 var vscode2 = __toESM(require("vscode"));
@@ -1853,9 +2216,17 @@ var CommitPanelProvider = class {
       );
       items.push(
         new CommitTreeItem(
-          "\u63D0\u4EA4\u5E76\u63A8\u9001",
+          "\u62C9\u53D6\u56E2\u961F\u6700\u65B0\u4EE3\u7801",
           vscode2.TreeItemCollapsibleState.None,
-          { command: "codesync.sync", title: "\u63D0\u4EA4\u5E76\u63A8\u9001" },
+          { command: "codesync.pull", title: "\u62C9\u53D6\u56E2\u961F\u6700\u65B0\u4EE3\u7801" },
+          "cloud-download"
+        )
+      );
+      items.push(
+        new CommitTreeItem(
+          "\u63D0\u4EA4\u5E76\u534F\u540C\u63A8\u9001",
+          vscode2.TreeItemCollapsibleState.None,
+          { command: "codesync.sync", title: "\u63D0\u4EA4\u5E76\u534F\u540C\u63A8\u9001" },
           "sync"
         )
       );
@@ -1961,7 +2332,10 @@ var vscode3 = __toESM(require("vscode"));
 // ../shared/ai/annotate.js
 init_config();
 function buildChatUrl(apiBase) {
-  const base = (apiBase || "").trim().replace(/\/+$/, "");
+  const base = (apiBase || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
+  if (base.endsWith("/chat/completions")) {
+    return base;
+  }
   return `${base}/chat/completions`;
 }
 async function generateAnnotation(code, language = "javascript") {
@@ -2201,8 +2575,48 @@ init_gitService();
 init_upload2();
 init_sync();
 
-// src/commands/config.ts
+// src/commands/pull.ts
 var vscode8 = __toESM(require("vscode"));
+init_gitService();
+async function pullCommand(gitService2, configManager2) {
+  const projectPath = GitService.resolveProjectPath();
+  if (!projectPath) {
+    vscode8.window.showErrorMessage("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u9879\u76EE\u6587\u4EF6\u5939");
+    return;
+  }
+  if (!gitService2.isRepository(projectPath)) {
+    vscode8.window.showErrorMessage("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F Git \u4ED3\u5E93\uFF0C\u65E0\u6CD5\u6267\u884C\u62C9\u53D6");
+    return;
+  }
+  try {
+    const result = await vscode8.window.withProgress(
+      {
+        location: vscode8.ProgressLocation.Notification,
+        title: "\u6B63\u5728\u62C9\u53D6\u8FDC\u7A0B\u56E2\u961F\u6700\u65B0\u4EE3\u7801...",
+        cancellable: false
+      },
+      async (progress) => {
+        return gitService2.pull({
+          projectPath,
+          onProgress: (percent, msg) => {
+            progress.report({ message: `${percent}% ${msg}` });
+          }
+        });
+      }
+    );
+    vscode8.window.showInformationMessage(`\u2705 ${result.message}\uFF08\u5206\u652F: ${result.branch || "\u5F53\u524D\u5206\u652F"}\uFF09`);
+  } catch (error) {
+    const message = (error == null ? void 0 : error.message) || String(error);
+    if (message.includes("\u62C9\u53D6\u51B2\u7A81") || (error == null ? void 0 : error.isConflict)) {
+      vscode8.window.showErrorMessage(message, { modal: true });
+    } else {
+      vscode8.window.showErrorMessage(`\u62C9\u53D6\u5931\u8D25: ${message}`);
+    }
+  }
+}
+
+// src/commands/config.ts
+var vscode9 = __toESM(require("vscode"));
 init_configManager();
 var MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 function mask(value) {
@@ -2211,7 +2625,7 @@ function mask(value) {
   return value.length <= 8 ? MASK : `${value.slice(0, 4)}${MASK}${value.slice(-4)}`;
 }
 async function setTokenCommand(configManager2) {
-  const platformPick = await vscode8.window.showQuickPick(
+  const platformPick = await vscode9.window.showQuickPick(
     PLATFORMS.map((p) => ({ label: p.label, id: p.id })),
     { title: "\u9009\u62E9\u8981\u914D\u7F6E Token \u7684\u5E73\u53F0", placeHolder: "GitHub / Gitee / GitLab" }
   );
@@ -2219,7 +2633,7 @@ async function setTokenCommand(configManager2) {
     return;
   const platform = platformPick.id;
   const current = configManager2.getToken(platform);
-  const token = await vscode8.window.showInputBox({
+  const token = await vscode9.window.showInputBox({
     title: `\u914D\u7F6E ${platformPick.label} Token`,
     prompt: current ? "\u5DF2\u6709 Token\uFF0C\u76F4\u63A5\u56DE\u8F66\u53EF\u53D6\u6D88" : "\u7C98\u8D34 Personal Access Token",
     value: current ? MASK : "",
@@ -2229,7 +2643,7 @@ async function setTokenCommand(configManager2) {
   if (!token || token === MASK)
     return;
   await configManager2.saveConfig({ [`${platform}Token`]: token });
-  vscode8.window.showInformationMessage(`\u2705 ${platformPick.label} Token \u5DF2\u4FDD\u5B58\u5230 ${configManager2.configFilePath}`);
+  vscode9.window.showInformationMessage(`\u2705 ${platformPick.label} Token \u5DF2\u4FDD\u5B58\u5230 ${configManager2.configFilePath}`);
 }
 async function showConfigCommand(configManager2) {
   const config = configManager2.getConfig();
@@ -2254,11 +2668,11 @@ async function showConfigCommand(configManager2) {
     `- GitLab: ${mask(config.gitlabToken)}`,
     `- GitLab API: ${config.gitlabBase}`
   ];
-  const doc = await vscode8.workspace.openTextDocument({
+  const doc = await vscode9.workspace.openTextDocument({
     content: lines.join("\n"),
     language: "markdown"
   });
-  await vscode8.window.showTextDocument(doc);
+  await vscode9.window.showTextDocument(doc);
 }
 
 // src/extension.ts
@@ -2272,47 +2686,51 @@ function activate(context) {
   codeAssistant = new CodeAssistant(configManager);
   gitService = new GitService(configManager);
   commitPanelProvider = new CommitPanelProvider(context, codeAssistant, gitService, configManager);
-  const commitPanelView = vscode9.window.createTreeView("codesync.commitPanel", {
+  const commitPanelView = vscode10.window.createTreeView("codesync.commitPanel", {
     treeDataProvider: commitPanelProvider,
     showCollapseAll: false
   });
   const commands4 = [
-    vscode9.commands.registerCommand("codesync.generateCommit", () => {
+    vscode10.commands.registerCommand("codesync.generateCommit", () => {
       commitPanelProvider.generateCommitMessage();
     }),
-    vscode9.commands.registerCommand("codesync.explainCode", () => {
+    vscode10.commands.registerCommand("codesync.explainCode", () => {
       codeAssistant.explainCode();
     }),
-    vscode9.commands.registerCommand("codesync.annotateCode", () => {
+    vscode10.commands.registerCommand("codesync.annotateCode", () => {
       codeAssistant.annotateCode();
     }),
-    vscode9.commands.registerCommand("codesync.reviewCode", () => {
+    vscode10.commands.registerCommand("codesync.reviewCode", () => {
       codeAssistant.reviewCode();
     }),
-    vscode9.commands.registerCommand("codesync.refreshDiff", () => {
+    vscode10.commands.registerCommand("codesync.refreshDiff", () => {
       commitPanelProvider.refresh();
     }),
-    vscode9.commands.registerCommand("codesync.openSettings", () => {
+    vscode10.commands.registerCommand("codesync.openSettings", () => {
       configManager.openSettings();
     }),
     // 一键上传项目到远程仓库
-    vscode9.commands.registerCommand("codesync.upload", () => {
+    vscode10.commands.registerCommand("codesync.upload", () => {
       uploadCommand(gitService, configManager);
     }),
-    // 提交并推送
-    vscode9.commands.registerCommand("codesync.sync", () => {
+    // 拉取远程团队最新代码（多人协作防冲突）
+    vscode10.commands.registerCommand("codesync.pull", () => {
+      pullCommand(gitService, configManager);
+    }),
+    // 提交并协同推送
+    vscode10.commands.registerCommand("codesync.sync", () => {
       syncCommand(gitService, configManager);
     }),
     // 配置平台 Token
-    vscode9.commands.registerCommand("codesync.setToken", () => {
+    vscode10.commands.registerCommand("codesync.setToken", () => {
       setTokenCommand(configManager);
     }),
     // 查看当前配置
-    vscode9.commands.registerCommand("codesync.showConfig", () => {
+    vscode10.commands.registerCommand("codesync.showConfig", () => {
       showConfigCommand(configManager);
     })
   ];
-  const gitExtension = vscode9.extensions.getExtension("vscode.git");
+  const gitExtension = vscode10.extensions.getExtension("vscode.git");
   if (gitExtension) {
     gitExtension.activate().then(() => {
       const git = gitExtension.exports.getAPI(1);

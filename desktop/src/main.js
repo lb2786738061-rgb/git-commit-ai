@@ -366,6 +366,66 @@ ipcMain.handle('project:download', async (event, options = {}) => {
   }
 });
 
+// 项目协同拉取更新
+ipcMain.handle('project:pull', async (event, options = {}) => {
+  try {
+    const { pullProject } = await import('../../shared/git/upload.js');
+    const projectPath = options.path ? path.resolve(options.path) : process.cwd();
+    const result = await pullProject({
+      projectPath,
+      remote: options.remote || 'origin',
+      onProgress: (percent, message) => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('pull:progress', { percent, message });
+          }
+        } catch (_) {}
+      }
+    });
+
+    return { success: true, ...result };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      isConflict: Boolean(error.isConflict),
+      conflictFiles: error.conflictFiles || [],
+      aiAnalysis: error.aiAnalysis || null
+    };
+  }
+});
+
+// 项目协同同步（提交 + 拉取融合 + 推送）
+ipcMain.handle('project:sync', async (event, options = {}) => {
+  try {
+    const { syncProject } = await import('../../shared/git/upload.js');
+    const projectPath = options.path ? path.resolve(options.path) : process.cwd();
+    const result = await syncProject({
+      projectPath,
+      message: options.message || undefined,
+      remote: options.remote || 'origin',
+      bypassHooks: options.bypassHooks === true,
+      onProgress: (percent, message) => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('sync:progress', { percent, message });
+          }
+        } catch (_) {}
+      }
+    });
+
+    return { success: true, ...result };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      isConflict: Boolean(error.isConflict),
+      conflictFiles: error.conflictFiles || [],
+      aiAnalysis: error.aiAnalysis || null
+    };
+  }
+});
+
 // 团队配置读取
 ipcMain.handle('config:readTeam', async () => {
   const teamConfigPath = path.join(process.cwd(), '.git-commit-ai-team.json');

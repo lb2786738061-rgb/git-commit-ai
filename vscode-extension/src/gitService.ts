@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import path from 'path';
 import { GitOperations } from '../../shared/git/operations.js';
-import { uploadProject, syncProject } from '../../shared/git/upload.js';
+import { uploadProject, syncProject, pullProject } from '../../shared/git/upload.js';
 import { generateCommitMessage } from '../../shared/ai/commit.js';
 import { ConfigManager, Platform } from './configManager';
 
@@ -83,14 +83,27 @@ export class GitService {
   }
 
   /**
-   * 增量同步已有仓库（暂存 → 提交 → 推送）
+   * 拉取远程最新代码（多人协作防冲突）
+   */
+  async pull(options: {
+    projectPath: string;
+    onProgress: (percent: number, message: string) => void;
+  }): Promise<{ success: boolean; branch?: string; message: string }> {
+    return pullProject({
+      projectPath: options.projectPath,
+      onProgress: options.onProgress
+    });
+  }
+
+  /**
+   * 协同同步已有仓库（暂存 → 提交 → 融合远程最新代码 → 推送）
    * @param options 同步参数
    */
   async sync(options: {
     projectPath: string;
     message?: string;
     onProgress: (percent: number, message: string) => void;
-  }): Promise<{ committed: boolean; commitMessage?: string; branch?: string; reason?: string }> {
+  }): Promise<{ committed: boolean; commitMessage?: string; branch?: string; reason?: string; pulled?: boolean }> {
     return syncProject({
       projectPath: options.projectPath,
       message: options.message,

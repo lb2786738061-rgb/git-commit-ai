@@ -11,6 +11,7 @@ const pages = {
   upload: renderUploadPage,
   download: renderDownloadPage,
   history: renderHistoryPage,
+  sync: renderSyncPage,
   'ai-commit': renderAICommitPage,
   'ai-code': renderAICodePage,
   team: renderTeamPage,
@@ -351,6 +352,148 @@ function renderHistoryPage(container) {
       commitList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, `加载失败: ${err.message}`)));
     }
   })();
+}
+
+// ── 协同同步与更新页面 ────────────────────────────────────────
+
+function renderSyncPage(container) {
+  container.appendChild(createPageHeader('协同同步与更新', '多人团队协作防冲突工作流：拉取团队最新代码，AI 智能协同提交与推送'));
+
+  const pathInput = el('input', { class: 'form-input', placeholder: '留空默认当前目录，或点击右侧选择', value: '' });
+  const selectDirBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectDir();
+        if (selected) pathInput.value = selected;
+      } catch (e) {
+        showToast('选择目录失败: ' + e.message, 'error');
+      }
+    }
+  }, '📁 浏览目录');
+
+  const pathRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, pathInput, selectDirBtn);
+  const msgInput = el('input', { class: 'form-input', placeholder: '提交信息（可选，留空将由 AI 智能分析改动后自动生成）' });
+  const logOutput = el('div', { class: 'output-log' }, '等待操作...');
+
+  const conflictBox = el('div', {
+    style: {
+      display: 'none',
+      marginTop: '16px',
+      padding: '16px',
+      background: 'rgba(239, 68, 68, 0.1)',
+      border: '1px solid rgba(239, 68, 68, 0.3)',
+      borderRadius: '8px'
+    }
+  });
+
+  container.appendChild(createCard('⚙️ 协同配置',
+    createFormGroup('项目路径', pathRow),
+    createFormGroup('自定义提交说明（可选）', msgInput)
+  ));
+
+  container.appendChild(createCard('🚀 协同操作面板',
+    el('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+      createButton('🔄 拉取远程最新代码 (Pull)', () => handlePull(), 'secondary'),
+      createButton('⚡ 一键协同同步 (Sync)', () => handleSync(), 'primary')
+    ),
+    el('p', { class: 'form-help', style: { marginTop: '10px' } },
+      '💡 团队协作建议：每天写代码前先点击「拉取远程最新代码」；功能写完后点击「一键协同同步」，系统会自动提交、融合远程最新代码并推送到远端。'
+    )
+  ));
+
+  container.appendChild(createCard('📋 协同日志与 AI 智能体分析',
+    logOutput,
+    conflictBox
+  ));
+
+  if (API && API.onPullProgress) {
+    API.onPullProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    });
+  }
+  if (API && API.onSyncProgress) {
+    API.onSyncProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    });
+  }
+
+  async function handlePull() {
+    conflictBox.style.display = 'none';
+    conflictBox.innerHTML = '';
+    logOutput.textContent = '';
+    logOutput.appendChild(createSpinner());
+    logOutput.appendChild(document.createTextNode(' 正在拉取远程团队最新代码...'));
+
+    try {
+      const result = await API.pullProject({
+        path: pathInput.value.trim() || undefined
+      });
+
+      if (!result || !result.success) {
+        handleErrorResult(result);
+        return;
+      }
+
+      logOutput.innerHTML = `<span class="log-success">✓ 拉取成功</span>\n<span class="log-info">分支: ${result.branch || '当前分支'}</span>\n<span class="log-info">状态: ${result.message}</span>`;
+      showToast('拉取团队代码成功！', 'success');
+    } catch (err) {
+      logOutput.innerHTML = `<span class="log-error">✗ 拉取失败: ${err.message}</span>`;
+      showToast('拉取失败: ' + err.message, 'error');
+    }
+  }
+
+  async function handleSync() {
+    conflictBox.style.display = 'none';
+    conflictBox.innerHTML = '';
+    logOutput.textContent = '';
+    logOutput.appendChild(createSpinner());
+    logOutput.appendChild(document.createTextNode(' 正在执行协同同步（提交 + 拉取融合 + 推送）...'));
+
+    try {
+      const result = await API.syncProject({
+        path: pathInput.value.trim() || undefined,
+        message: msgInput.value.trim() || undefined
+      });
+
+      if (!result || !result.success) {
+        handleErrorResult(result);
+        return;
+      }
+
+      const statusText = result.committed ? '已自动提交修改并推送到远程' : (result.pulled ? '已成功同步远程最新代码' : '工作区已是最新');
+      logOutput.innerHTML = `<span class="log-success">✓ 协同同步成功</span>\n<span class="log-info">分支: ${result.branch}</span>\n<span class="log-info">状态: ${statusText}</span>` +
+        (result.commitMessage ? `\n<span class="log-info">提交信息: ${result.commitMessage}</span>` : '');
+      showToast('协同同步成功！', 'success');
+    } catch (err) {
+      logOutput.innerHTML = `<span class="log-error">✗ 同步失败: ${err.message}</span>`;
+      showToast('同步失败: ' + err.message, 'error');
+    }
+  }
+
+  function handleErrorResult(result) {
+    const errMsg = result && (result.error || result.message) ? (result.error || result.message) : '未知异常';
+    logOutput.innerHTML = `<span class="log-error">✗ 操作未能完成: ${errMsg}</span>`;
+
+    if (result && result.isConflict) {
+      conflictBox.style.display = 'block';
+      const fileListHtml = (result.conflictFiles || []).map(f => `<li><code>${f}</code></li>`).join('');
+      const suggestionsText = result.aiAnalysis && result.aiAnalysis.suggestions
+        ? result.aiAnalysis.suggestions
+        : '请手动对比冲突标记行并处理。';
+
+      conflictBox.innerHTML = `
+        <div style="font-weight: 600; color: #f87171; margin-bottom: 8px;">⚠️ 检测到多人代码冲突</div>
+        <div style="margin-bottom: 8px; color: #e5e7eb;">以下文件同时被多人修改：</div>
+        <ul style="margin-left: 20px; margin-bottom: 12px; color: #fca5a5;">${fileListHtml}</ul>
+        <div style="font-weight: 600; color: #a78bfa; margin-bottom: 6px;">🤖 AI 智能体冲突审查与合并建议：</div>
+        <pre style="white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; color: #e5e7eb; line-height: 1.5;">${suggestionsText}</pre>
+      `;
+    }
+
+    showToast('操作失败: ' + errMsg, 'error');
+  }
 }
 
 // ── AI 智能提交页面 ────────────────────────────────────────

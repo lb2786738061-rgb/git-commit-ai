@@ -64,6 +64,19 @@ program
   );
 
 program
+  .command('sync')
+  .description('一键协同同步项目（自动提交本地修改 + 拉取远程融合 + 推送）')
+  .option('-p, --path <path>', '项目路径（默认当前目录）')
+  .option('-m, --message <message>', '指定提交信息（默认由 AI 生成）')
+  .option('--bypass-hooks', '跳过 Git 钩子校验')
+  .action((options) =>
+    import('../src/commands/push.js').then(
+      ({ pushCommand }) => pushCommand(options),
+      (e) => { console.error('Error:', e.message); process.exit(1); }
+    )
+  );
+
+program
   .command('ai')
   .description('AI助手功能')
   .argument('<action>', '操作类型 (commit/annotate/explain/review)')
