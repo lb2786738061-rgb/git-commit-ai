@@ -14,6 +14,7 @@
     "link:cli": "cd cli && npm link",
     "desktop:dev": "cd desktop && npm run dev",
     "desktop:start": "cd desktop && npm start",
+    "package:extension": "cd vscode-extension && npx @vscode/vsce package --no-dependencies",
     "test": "node run-tests.js"
   },
   "keywords": [

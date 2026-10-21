@@ -304,6 +304,7 @@
     "watch": "node build.js --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "npm run typecheck",
+    "package": "vsce package --no-dependencies",
     "test": "npm run compile && npm run typecheck"
   },
   "devDependencies": {
