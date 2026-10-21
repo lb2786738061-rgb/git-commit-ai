@@ -190,19 +190,32 @@ function renderUploadPage(container) {
 
   container.appendChild(createCard('📋 操作日志', logOutput));
 
+  if (API && API.onUploadProgress) {
+    API.onUploadProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    });
+  }
+
   async function handleUpload() {
     logOutput.textContent = '';
     logOutput.appendChild(createSpinner());
-    logOutput.appendChild(document.createTextNode(' 正在上传项目...'));
+    logOutput.appendChild(document.createTextNode(' 正在准备上传...'));
 
     try {
       const result = await API.uploadProject({
-        path: pathInput.value || undefined,
+        path: pathInput.value.trim() || undefined,
         platform: platformSelect.value,
-        name: nameInput.value || undefined,
-        description: descInput.value || undefined,
+        name: nameInput.value.trim() || undefined,
+        description: descInput.value.trim() || undefined,
         isPrivate: privateToggle.checked
       });
+
+      if (!result || !result.success) {
+        const errMsg = result && (result.error || result.message) ? (result.error || result.message) : '未知错误';
+        logOutput.innerHTML = `<span class="log-error">✗ 上传失败: ${errMsg}</span>`;
+        showToast('上传失败: ' + errMsg, 'error');
+        return;
+      }
 
       logOutput.innerHTML = `<span class="log-success">✓ 上传成功</span>\n<span class="log-info">仓库地址: ${result.repoUrl}</span>`;
       showToast('项目上传成功！', 'success');
@@ -260,7 +273,14 @@ function renderDownloadPage(container) {
       createButton('开始下载', () => handleDownload())
     )
   ));
+
   container.appendChild(createCard('📋 操作日志', logOutput));
+
+  if (API && API.onDownloadProgress) {
+    API.onDownloadProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    });
+  }
 
   async function handleDownload() {
     if (!urlInput.value.trim()) {
@@ -270,14 +290,21 @@ function renderDownloadPage(container) {
 
     logOutput.textContent = '';
     logOutput.appendChild(createSpinner());
-    logOutput.appendChild(document.createTextNode(' 正在下载项目...'));
+    logOutput.appendChild(document.createTextNode(' 正在准备下载...'));
 
     try {
       const result = await API.downloadProject({
-        url: urlInput.value,
-        path: pathInput.value || undefined,
+        url: urlInput.value.trim(),
+        path: pathInput.value.trim() || undefined,
         install: installToggle.checked
       });
+
+      if (!result || !result.success) {
+        const errMsg = result && (result.error || result.message) ? (result.error || result.message) : '未知错误';
+        logOutput.innerHTML = `<span class="log-error">✗ 下载失败: ${errMsg}</span>`;
+        showToast('下载失败: ' + errMsg, 'error');
+        return;
+      }
 
       logOutput.innerHTML = `<span class="log-success">✓ 下载成功</span>\n<span class="log-info">项目路径: ${result.projectPath}</span>`;
       showToast('项目下载成功！', 'success');

@@ -317,42 +317,53 @@ ipcMain.handle('ai:generateCommit', async () => {
 });
 
 // 项目上传
-ipcMain.handle('project:upload', async (event, options) => {
-  const cliPath = path.join(__dirname, '../../cli/bin/codesync.js');
-  const args = ['upload'];
-  if (options.platform) args.push('-P', options.platform);
-  if (options.name) args.push('-n', options.name);
-  if (options.description) args.push('-d', options.description);
-  if (options.isPrivate) args.push('--private');
-  if (options.path) args.push('-p', options.path);
-
-  return new Promise((resolve) => {
-    execFile('node', [cliPath, ...args], { timeout: 120000 }, (error, stdout, stderr) => {
-      if (error) {
-        resolve({ success: false, error: stderr || error.message });
-      } else {
-        resolve({ success: true, repoUrl: stdout.trim() });
+ipcMain.handle('project:upload', async (event, options = {}) => {
+  try {
+    const { uploadProject } = await import('../../shared/git/upload.js');
+    const projectPath = options.path ? path.resolve(options.path) : process.cwd();
+    const repoUrl = await uploadProject({
+      projectPath,
+      platform: options.platform || 'github',
+      repoName: options.name || path.basename(projectPath),
+      description: options.description || '',
+      isPrivate: Boolean(options.isPrivate),
+      onProgress: (percent, message) => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('upload:progress', { percent, message });
+          }
+        } catch (_) {}
       }
     });
-  });
+
+    return { success: true, repoUrl };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // 项目下载
-ipcMain.handle('project:download', async (event, options) => {
-  const cliPath = path.join(__dirname, '../../cli/bin/codesync.js');
-  const args = ['download', options.url];
-  if (options.path) args.push('-p', options.path);
-  if (options.install) args.push('--install');
-
-  return new Promise((resolve) => {
-    execFile('node', [cliPath, ...args], { timeout: 120000 }, (error, stdout, stderr) => {
-      if (error) {
-        resolve({ success: false, error: stderr || error.message });
-      } else {
-        resolve({ success: true, projectPath: stdout.trim() });
+ipcMain.handle('project:download', async (event, options = {}) => {
+  try {
+    const { downloadProject } = await import('../../shared/git/download.js');
+    const targetPath = options.path ? path.resolve(options.path) : process.cwd();
+    const projectPath = await downloadProject({
+      repoUrl: options.url,
+      targetPath,
+      installDeps: Boolean(options.install),
+      onProgress: (percent, message) => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('download:progress', { percent, message });
+          }
+        } catch (_) {}
       }
     });
-  });
+
+    return { success: true, projectPath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // 团队配置读取

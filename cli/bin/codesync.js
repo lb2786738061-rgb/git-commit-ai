@@ -18,6 +18,7 @@ program
   .option('-n, --name <name>', '仓库名称')
   .option('-d, --description <desc>', '仓库描述')
   .option('--private', '创建私有仓库')
+  .option('-y, --yes', '跳过确认直接执行上传')
   .action((options) =>
     import('../src/commands/upload.js').then(
       ({ uploadCommand }) => uploadCommand(options),

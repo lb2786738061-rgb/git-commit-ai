@@ -311,6 +311,18 @@ export class GitOperations {
       });
       return true;
     } catch (error) {
+      const errStr = (error.message || '') + (error.stderr ? error.stderr.toString() : '');
+      if (errStr.includes('already exists')) {
+        try {
+          execFileSync('git', ['remote', 'set-url', name, url], {
+            cwd: this.projectPath,
+            stdio: 'pipe'
+          });
+          return true;
+        } catch (setErr) {
+          throw new Error(`更新远程仓库失败: ${setErr.message}`);
+        }
+      }
       throw new Error(`添加远程仓库失败: ${error.message}`);
     }
   }

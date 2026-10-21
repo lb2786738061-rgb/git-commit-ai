@@ -21,17 +21,20 @@ export async function uploadCommand(options) {
   if (finalIsPrivate) console.log(`  ${pc.bold('可见性:')}   私有`);
   console.log(pc.dim('─'.repeat(50)));
 
-  const { default: prompts } = await import('prompts');
-  const confirm = await prompts({
-    type: 'confirm',
-    name: 'proceed',
-    message: '确认上传项目?',
-    initial: true
-  });
+  const shouldPrompt = !options.yes && Boolean(process.stdin.isTTY);
+  if (shouldPrompt) {
+    const { default: prompts } = await import('prompts');
+    const confirm = await prompts({
+      type: 'confirm',
+      name: 'proceed',
+      message: '确认上传项目?',
+      initial: true
+    });
 
-  if (!confirm.proceed) {
-    console.log(pc.yellow('\n操作已取消。'));
-    return;
+    if (!confirm.proceed) {
+      console.log(pc.yellow('\n操作已取消。'));
+      return;
+    }
   }
 
   const spinner = ora(pc.cyan('正在上传项目...')).start();
