@@ -382,7 +382,7 @@ codesync release 2.0.0
 - [FEATURES_COMPLETE.md](FEATURES_COMPLETE.md) - Complete feature documentation
 - [AGENT_GUIDE.md](AGENT_GUIDE.md) - Agent usage guide
 - [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) - Implementation report
-- [拓展.md](拓展.md) - Feature expansion plan
+- [EXTENSIONS.md](EXTENSIONS.md) - Feature expansion plan
 
 ---
 

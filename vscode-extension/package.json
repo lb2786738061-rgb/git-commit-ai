@@ -235,88 +235,88 @@
         "codesync.apiKey": {
           "type": "string",
           "default": "",
-          "markdownDescription": "OpenAI API Key。留空则使用 `~/.git-commit-ai.json` 中与 CLI / 桌面版共用的配置。",
+          "markdownDescription": "OpenAI API key. Leave empty to use the value shared with the CLI / desktop app in `~/.git-commit-ai.json`.",
           "order": 1
         },
         "codesync.apiBase": {
           "type": "string",
           "default": "",
-          "markdownDescription": "API Base URL。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "API base URL. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 2
         },
         "codesync.model": {
           "type": "string",
           "default": "",
-          "markdownDescription": "默认 AI 模型。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Default AI model. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 3
         },
         "codesync.convention": {
           "type": "string",
           "enum": ["angular", "gitmoji"],
           "default": "",
-          "markdownDescription": "提交信息规范。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Commit message convention. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 4
         },
         "codesync.language": {
           "type": "string",
           "enum": ["en", "zh", "ja"],
           "default": "",
-          "markdownDescription": "提交信息语言。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Commit message language. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 5
         },
         "codesync.smartModel": {
           "type": ["boolean", "null"],
           "default": null,
-          "markdownDescription": "启用智能模型选择（根据 diff 复杂度选择快/慢模型）。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Enable smart model selection (picks the fast or powerful model based on the diff complexity). Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 6
         },
         "codesync.fastModel": {
           "type": "string",
           "default": "",
-          "markdownDescription": "快速模型。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Fast model. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 7
         },
         "codesync.powerfulModel": {
           "type": "string",
           "default": "",
-          "markdownDescription": "强大模型。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Powerful model. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 8
         },
         "codesync.githubToken": {
           "type": "string",
           "default": "",
-          "markdownDescription": "GitHub Token。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "GitHub token. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 9
         },
         "codesync.giteeToken": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Gitee Token。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "Gitee token. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 10
         },
         "codesync.gitlabToken": {
           "type": "string",
           "default": "",
-          "markdownDescription": "GitLab Token。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "GitLab token. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 11
         },
         "codesync.gitlabBase": {
           "type": "string",
           "default": "",
-          "markdownDescription": "GitLab API 地址。留空则使用 `~/.git-commit-ai.json` 中的配置。",
+          "markdownDescription": "GitLab API base URL. Leave empty to use the value in `~/.git-commit-ai.json`.",
           "order": 12
         },
         "codesync.platform": {
           "type": "string",
           "enum": ["github", "gitee", "gitlab"],
           "default": "github",
-          "description": "上传时默认选中的代码托管平台",
+          "description": "The code hosting platform selected by default when uploading",
           "order": 13
         },
         "codesync.bypassHooks": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "提交时跳过 Git 钩子校验（如团队提交规范强制钩子）。关闭时团队规范会被强制执行。",
+          "markdownDescription": "Skip Git hook validation when committing (e.g. an enforcing team commit-convention hook). Keep it disabled so the team conventions are enforced.",
           "order": 14
         }
       }
