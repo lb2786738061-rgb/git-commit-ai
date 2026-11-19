@@ -22,6 +22,68 @@ const pages = {
 };
 
 let currentPage = 'upload';
+let pageCleanupFns = [];
+
+// ── 全局项目目录记忆与安全工具 ──────────────────────────────
+
+function getSavedProjectPath() {
+  try {
+    return localStorage.getItem('codesync_project_path') || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function setSavedProjectPath(dirPath) {
+  try {
+    if (dirPath && dirPath.trim()) {
+      localStorage.setItem('codesync_project_path', dirPath.trim());
+    }
+  } catch (_) {}
+}
+
+function registerCleanup(fn) {
+  if (typeof fn === 'function') {
+    pageCleanupFns.push(fn);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function detectLanguageFromPath(filePath) {
+  const ext = String(filePath || '').split('.').pop().toLowerCase();
+  const map = {
+    js: 'javascript',
+    mjs: 'javascript',
+    cjs: 'javascript',
+    ts: 'typescript',
+    tsx: 'typescript',
+    jsx: 'javascript',
+    py: 'python',
+    java: 'java',
+    go: 'go',
+    rs: 'rust',
+    c: 'c',
+    cpp: 'cpp',
+    cs: 'csharp',
+    php: 'php',
+    rb: 'ruby',
+    vue: 'vue',
+    html: 'html',
+    css: 'css',
+    json: 'json',
+    sh: 'shell',
+    sql: 'sql'
+  };
+  return map[ext] || 'text';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   initTitlebar();
@@ -46,6 +108,11 @@ function initNavigation() {
 }
 
 function navigateTo(page) {
+  // 切换页面前清理上一页注册的进度监听等副作用，避免内存泄漏与重复触发
+  while (pageCleanupFns.length > 0) {
+    const fn = pageCleanupFns.pop();
+    try { fn(); } catch (_) {}
+  }
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === page);
@@ -129,7 +196,12 @@ function createSpinner() {
 function renderUploadPage(container) {
   container.appendChild(createPageHeader('上传项目', '将当前项目上传到 GitHub / Gitee / GitLab 远程仓库'));
 
-  const pathInput = el('input', { class: 'form-input', placeholder: '留空默认当前目录，或点击右侧选择', value: '' });
+  const pathInput = el('input', {
+    class: 'form-input',
+    placeholder: '留空默认当前目录，或点击右侧选择整个项目根目录',
+    value: getSavedProjectPath()
+  });
+  pathInput.addEventListener('change', () => setSavedProjectPath(pathInput.value));
   const selectDirBtn = el('button', {
     class: 'btn btn-secondary',
     style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
@@ -138,6 +210,7 @@ function renderUploadPage(container) {
         const selected = await API.selectDir();
         if (selected) {
           pathInput.value = selected;
+          setSavedProjectPath(selected);
         }
       } catch (e) {
         showToast('选择目录失败: ' + e.message, 'error');
@@ -192,9 +265,10 @@ function renderUploadPage(container) {
   container.appendChild(createCard('📋 操作日志', logOutput));
 
   if (API && API.onUploadProgress) {
-    API.onUploadProgress((data) => {
-      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    const unsubscribe = API.onUploadProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${escapeHtml(data.percent)}%] ${escapeHtml(data.message)}</span>`;
     });
+    registerCleanup(unsubscribe);
   }
 
   async function handleUpload() {
@@ -203,8 +277,11 @@ function renderUploadPage(container) {
     logOutput.appendChild(document.createTextNode(' 正在准备上传...'));
 
     try {
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
       const result = await API.uploadProject({
-        path: pathInput.value.trim() || undefined,
+        path: targetPath,
         platform: platformSelect.value,
         name: nameInput.value.trim() || undefined,
         description: descInput.value.trim() || undefined,
@@ -213,15 +290,15 @@ function renderUploadPage(container) {
 
       if (!result || !result.success) {
         const errMsg = result && (result.error || result.message) ? (result.error || result.message) : '未知错误';
-        logOutput.innerHTML = `<span class="log-error">✗ 上传失败: ${errMsg}</span>`;
+        logOutput.innerHTML = `<span class="log-error">✗ 上传失败: ${escapeHtml(errMsg)}</span>`;
         showToast('上传失败: ' + errMsg, 'error');
         return;
       }
 
-      logOutput.innerHTML = `<span class="log-success">✓ 上传成功</span>\n<span class="log-info">仓库地址: ${result.repoUrl}</span>`;
+      logOutput.innerHTML = `<span class="log-success">✓ 上传成功</span>\n<span class="log-info">仓库地址: ${escapeHtml(result.repoUrl)}</span>`;
       showToast('项目上传成功！', 'success');
     } catch (err) {
-      logOutput.innerHTML = `<span class="log-error">✗ 上传失败: ${err.message}</span>`;
+      logOutput.innerHTML = `<span class="log-error">✗ 上传失败: ${escapeHtml(err.message)}</span>`;
       showToast('上传失败: ' + err.message, 'error');
     }
   }
@@ -278,9 +355,10 @@ function renderDownloadPage(container) {
   container.appendChild(createCard('📋 操作日志', logOutput));
 
   if (API && API.onDownloadProgress) {
-    API.onDownloadProgress((data) => {
-      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    const unsubscribe = API.onDownloadProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${escapeHtml(data.percent)}%] ${escapeHtml(data.message)}</span>`;
     });
+    registerCleanup(unsubscribe);
   }
 
   async function handleDownload() {
@@ -302,15 +380,15 @@ function renderDownloadPage(container) {
 
       if (!result || !result.success) {
         const errMsg = result && (result.error || result.message) ? (result.error || result.message) : '未知错误';
-        logOutput.innerHTML = `<span class="log-error">✗ 下载失败: ${errMsg}</span>`;
+        logOutput.innerHTML = `<span class="log-error">✗ 下载失败: ${escapeHtml(errMsg)}</span>`;
         showToast('下载失败: ' + errMsg, 'error');
         return;
       }
 
-      logOutput.innerHTML = `<span class="log-success">✓ 下载成功</span>\n<span class="log-info">项目路径: ${result.projectPath}</span>`;
+      logOutput.innerHTML = `<span class="log-success">✓ 下载成功</span>\n<span class="log-info">项目路径: ${escapeHtml(result.projectPath)}</span>`;
       showToast('项目下载成功！', 'success');
     } catch (err) {
-      logOutput.innerHTML = `<span class="log-error">✗ 下载失败: ${err.message}</span>`;
+      logOutput.innerHTML = `<span class="log-error">✗ 下载失败: ${escapeHtml(err.message)}</span>`;
       showToast('下载失败: ' + err.message, 'error');
     }
   }
@@ -321,17 +399,57 @@ function renderDownloadPage(container) {
 function renderHistoryPage(container) {
   container.appendChild(createPageHeader('提交历史', '查看当前仓库的提交记录'));
 
-  const commitList = el('div', { class: 'commit-list' });
-  commitList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '加载中...')));
+  const pathInput = el('input', {
+    class: 'form-input',
+    placeholder: '留空默认当前目录，或点击右侧选择项目目录',
+    value: getSavedProjectPath()
+  });
+  pathInput.addEventListener('change', () => setSavedProjectPath(pathInput.value));
 
+  const selectDirBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectDir();
+        if (selected) {
+          pathInput.value = selected;
+          setSavedProjectPath(selected);
+          loadHistory();
+        }
+      } catch (e) {
+        showToast('选择目录失败: ' + e.message, 'error');
+      }
+    }
+  }, '📁 浏览目录');
+
+  const refreshBtn = createButton('刷新历史', () => loadHistory(), 'secondary');
+  const pathRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, pathInput, selectDirBtn, refreshBtn);
+
+  container.appendChild(createCard('📂 仓库路径', createFormGroup('项目目录', pathRow)));
+
+  const commitList = el('div', { class: 'commit-list' });
   container.appendChild(createCard('📜 最近提交', commitList));
 
-  (async () => {
+  async function loadHistory() {
+    commitList.innerHTML = '';
+    commitList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '加载中...')));
+
     try {
-      const commits = await API.getCommitHistory(20);
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const res = await API.getCommitHistory(targetPath, 20);
       commitList.innerHTML = '';
 
-      if (!commits || commits.length === 0) {
+      if (!res || !res.success) {
+        const errMsg = res && res.error ? res.error : '当前目录不是有效的 Git 仓库或暂无提交记录';
+        commitList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, `加载失败: ${errMsg}`)));
+        return;
+      }
+
+      const commits = Array.isArray(res.commits) ? res.commits : [];
+      if (commits.length === 0) {
         commitList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, '暂无提交记录')));
         return;
       }
@@ -339,7 +457,7 @@ function renderHistoryPage(container) {
       for (const commit of commits) {
         const item = el('div', { class: 'commit-item' },
           el('span', { class: 'commit-hash' }, commit.hash ? commit.hash.slice(0, 7) : '------'),
-          el('span', { class: 'commit-subject' }, commit.subject || commit.message || commit),
+          el('span', { class: 'commit-subject' }, commit.subject || commit.message || String(commit)),
           el('span', { class: 'commit-meta' },
             commit.author ? el('span', {}, commit.author) : '',
             commit.date ? el('span', {}, commit.date) : ''
@@ -351,7 +469,9 @@ function renderHistoryPage(container) {
       commitList.innerHTML = '';
       commitList.appendChild(el('div', { class: 'empty-state' }, el('p', {}, `加载失败: ${err.message}`)));
     }
-  })();
+  }
+
+  loadHistory();
 }
 
 // ── 协同同步与更新页面 ────────────────────────────────────────
@@ -359,14 +479,22 @@ function renderHistoryPage(container) {
 function renderSyncPage(container) {
   container.appendChild(createPageHeader('协同同步与更新', '多人团队协作防冲突工作流：拉取团队最新代码，AI 智能协同提交与推送'));
 
-  const pathInput = el('input', { class: 'form-input', placeholder: '留空默认当前目录，或点击右侧选择', value: '' });
+  const pathInput = el('input', {
+    class: 'form-input',
+    placeholder: '留空默认当前目录，或点击右侧选择项目目录',
+    value: getSavedProjectPath()
+  });
+  pathInput.addEventListener('change', () => setSavedProjectPath(pathInput.value));
   const selectDirBtn = el('button', {
     class: 'btn btn-secondary',
     style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
     onClick: async () => {
       try {
         const selected = await API.selectDir();
-        if (selected) pathInput.value = selected;
+        if (selected) {
+          pathInput.value = selected;
+          setSavedProjectPath(selected);
+        }
       } catch (e) {
         showToast('选择目录失败: ' + e.message, 'error');
       }
@@ -409,14 +537,16 @@ function renderSyncPage(container) {
   ));
 
   if (API && API.onPullProgress) {
-    API.onPullProgress((data) => {
-      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    const unsubscribe = API.onPullProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${escapeHtml(data.percent)}%] ${escapeHtml(data.message)}</span>`;
     });
+    registerCleanup(unsubscribe);
   }
   if (API && API.onSyncProgress) {
-    API.onSyncProgress((data) => {
-      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${data.percent}%] ${data.message}</span>`;
+    const unsubscribe = API.onSyncProgress((data) => {
+      logOutput.innerHTML = `<span class="spinner"></span> <span class="log-info">[${escapeHtml(data.percent)}%] ${escapeHtml(data.message)}</span>`;
     });
+    registerCleanup(unsubscribe);
   }
 
   async function handlePull() {
@@ -427,8 +557,11 @@ function renderSyncPage(container) {
     logOutput.appendChild(document.createTextNode(' 正在拉取远程团队最新代码...'));
 
     try {
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
       const result = await API.pullProject({
-        path: pathInput.value.trim() || undefined
+        path: targetPath
       });
 
       if (!result || !result.success) {
@@ -436,10 +569,10 @@ function renderSyncPage(container) {
         return;
       }
 
-      logOutput.innerHTML = `<span class="log-success">✓ 拉取成功</span>\n<span class="log-info">分支: ${result.branch || '当前分支'}</span>\n<span class="log-info">状态: ${result.message}</span>`;
+      logOutput.innerHTML = `<span class="log-success">✓ 拉取成功</span>\n<span class="log-info">分支: ${escapeHtml(result.branch || '当前分支')}</span>\n<span class="log-info">状态: ${escapeHtml(result.message)}</span>`;
       showToast('拉取团队代码成功！', 'success');
     } catch (err) {
-      logOutput.innerHTML = `<span class="log-error">✗ 拉取失败: ${err.message}</span>`;
+      logOutput.innerHTML = `<span class="log-error">✗ 拉取失败: ${escapeHtml(err.message)}</span>`;
       showToast('拉取失败: ' + err.message, 'error');
     }
   }
@@ -452,8 +585,11 @@ function renderSyncPage(container) {
     logOutput.appendChild(document.createTextNode(' 正在执行协同同步（提交 + 拉取融合 + 推送）...'));
 
     try {
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
       const result = await API.syncProject({
-        path: pathInput.value.trim() || undefined,
+        path: targetPath,
         message: msgInput.value.trim() || undefined
       });
 
@@ -463,22 +599,22 @@ function renderSyncPage(container) {
       }
 
       const statusText = result.committed ? '已自动提交修改并推送到远程' : (result.pulled ? '已成功同步远程最新代码' : '工作区已是最新');
-      logOutput.innerHTML = `<span class="log-success">✓ 协同同步成功</span>\n<span class="log-info">分支: ${result.branch}</span>\n<span class="log-info">状态: ${statusText}</span>` +
-        (result.commitMessage ? `\n<span class="log-info">提交信息: ${result.commitMessage}</span>` : '');
+      logOutput.innerHTML = `<span class="log-success">✓ 协同同步成功</span>\n<span class="log-info">分支: ${escapeHtml(result.branch)}</span>\n<span class="log-info">状态: ${escapeHtml(statusText)}</span>` +
+        (result.commitMessage ? `\n<span class="log-info">提交信息: ${escapeHtml(result.commitMessage)}</span>` : '');
       showToast('协同同步成功！', 'success');
     } catch (err) {
-      logOutput.innerHTML = `<span class="log-error">✗ 同步失败: ${err.message}</span>`;
+      logOutput.innerHTML = `<span class="log-error">✗ 同步失败: ${escapeHtml(err.message)}</span>`;
       showToast('同步失败: ' + err.message, 'error');
     }
   }
 
   function handleErrorResult(result) {
     const errMsg = result && (result.error || result.message) ? (result.error || result.message) : '未知异常';
-    logOutput.innerHTML = `<span class="log-error">✗ 操作未能完成: ${errMsg}</span>`;
+    logOutput.innerHTML = `<span class="log-error">✗ 操作未能完成: ${escapeHtml(errMsg)}</span>`;
 
     if (result && result.isConflict) {
       conflictBox.style.display = 'block';
-      const fileListHtml = (result.conflictFiles || []).map(f => `<li><code>${f}</code></li>`).join('');
+      const fileListHtml = (result.conflictFiles || []).map(f => `<li><code>${escapeHtml(f)}</code></li>`).join('');
       const suggestionsText = result.aiAnalysis && result.aiAnalysis.suggestions
         ? result.aiAnalysis.suggestions
         : '请手动对比冲突标记行并处理。';
@@ -488,7 +624,7 @@ function renderSyncPage(container) {
         <div style="margin-bottom: 8px; color: #e5e7eb;">以下文件同时被多人修改：</div>
         <ul style="margin-left: 20px; margin-bottom: 12px; color: #fca5a5;">${fileListHtml}</ul>
         <div style="font-weight: 600; color: #a78bfa; margin-bottom: 6px;">🤖 AI 智能体冲突审查与合并建议：</div>
-        <pre style="white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; color: #e5e7eb; line-height: 1.5;">${suggestionsText}</pre>
+        <pre style="white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; color: #e5e7eb; line-height: 1.5;">${escapeHtml(suggestionsText)}</pre>
       `;
     }
 
@@ -501,9 +637,36 @@ function renderSyncPage(container) {
 function renderAICommitPage(container) {
   container.appendChild(createPageHeader('智能提交', '使用 AI 自动生成符合规范的提交信息'));
 
+  const pathInput = el('input', {
+    class: 'form-input',
+    placeholder: '留空默认当前目录，或点击右侧选择项目目录',
+    value: getSavedProjectPath()
+  });
+  pathInput.addEventListener('change', () => setSavedProjectPath(pathInput.value));
+
+  const selectDirBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectDir();
+        if (selected) {
+          pathInput.value = selected;
+          setSavedProjectPath(selected);
+          refreshDiff();
+        }
+      } catch (e) {
+        showToast('选择目录失败: ' + e.message, 'error');
+      }
+    }
+  }, '📁 浏览目录');
+
+  const pathRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, pathInput, selectDirBtn);
   const diffOutput = el('div', { class: 'output-log' }, '等待获取暂存区更改...');
   const commitMsgInput = el('textarea', { class: 'form-textarea', placeholder: 'AI 将自动生成提交信息...' });
   const resultOutput = el('div', { class: 'output-log' }, '等待提交...');
+
+  container.appendChild(createCard('📂 仓库路径', createFormGroup('项目目录', pathRow)));
 
   container.appendChild(createCard('📝 暂存区更改',
     diffOutput,
@@ -528,14 +691,23 @@ function renderAICommitPage(container) {
     diffOutput.appendChild(document.createTextNode(' 正在获取暂存区更改...'));
 
     try {
-      const diff = await API.getStagedDiff();
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const res = await API.getStagedDiff(targetPath);
+      if (res && typeof res === 'object' && res.success === false) {
+        diffOutput.innerHTML = `<span class="log-error">✗ 获取失败: ${escapeHtml(res.error || '当前目录不是有效仓库')}</span>`;
+        return;
+      }
+
+      const diff = typeof res === 'string' ? res : (res && res.diff ? res.diff : '');
       if (!diff || !diff.trim()) {
-        diffOutput.innerHTML = '<span class="log-warn">⚠ 没有暂存的更改，请先运行 git add</span>';
+        diffOutput.innerHTML = '<span class="log-warn">⚠ 没有暂存的更改，请先运行 git add 暂存更改</span>';
       } else {
         diffOutput.textContent = diff.slice(0, 2000) + (diff.length > 2000 ? '\n... (已截断)' : '');
       }
     } catch (err) {
-      diffOutput.innerHTML = `<span class="log-error">✗ 获取失败: ${err.message}</span>`;
+      diffOutput.innerHTML = `<span class="log-error">✗ 获取失败: ${escapeHtml(err.message)}</span>`;
     }
   }
 
@@ -544,8 +716,18 @@ function renderAICommitPage(container) {
     commitMsgInput.placeholder = '正在生成...';
 
     try {
-      const result = await API.generateCommitMessage();
-      commitMsgInput.value = result.message || result;
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const result = await API.generateCommitMessage(targetPath);
+      if (!result || !result.success) {
+        const errMsg = result && result.error ? result.error : '生成提交信息失败';
+        commitMsgInput.placeholder = '生成失败';
+        showToast('生成失败: ' + errMsg, 'error');
+        return;
+      }
+
+      commitMsgInput.value = result.message || '';
       showToast('提交信息生成成功', 'success');
     } catch (err) {
       commitMsgInput.value = '';
@@ -566,12 +748,23 @@ function renderAICommitPage(container) {
     resultOutput.appendChild(document.createTextNode(' 正在提交...'));
 
     try {
-      await API.commitChanges(message);
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const res = await API.commitChanges(targetPath, message);
+      if (!res || !res.success) {
+        const errMsg = res && res.error ? res.error : '提交失败';
+        resultOutput.innerHTML = `<span class="log-error">✗ 提交失败: ${escapeHtml(errMsg)}</span>`;
+        showToast('提交失败: ' + errMsg, 'error');
+        return;
+      }
+
       resultOutput.innerHTML = '<span class="log-success">✓ 提交成功</span>';
       showToast('提交成功！', 'success');
       commitMsgInput.value = '';
+      refreshDiff();
     } catch (err) {
-      resultOutput.innerHTML = `<span class="log-error">✗ 提交失败: ${err.message}</span>`;
+      resultOutput.innerHTML = `<span class="log-error">✗ 提交失败: ${escapeHtml(err.message)}</span>`;
       showToast('提交失败: ' + err.message, 'error');
     }
   }
@@ -584,7 +777,22 @@ function renderAICommitPage(container) {
 function renderAICodePage(container) {
   container.appendChild(createPageHeader('代码助手', 'AI 代码注解、解释和审查'));
 
-  const fileInput = el('input', { class: 'form-input', placeholder: '输入文件路径，如 src/index.js' });
+  const fileInput = el('input', { class: 'form-input', placeholder: '输入或选择代码文件路径，如 src/index.js' });
+  const selectFileBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectFile();
+        if (selected) fileInput.value = selected;
+      } catch (e) {
+        showToast('选择文件失败: ' + e.message, 'error');
+      }
+    }
+  }, '📄 选择文件');
+
+  const fileRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, fileInput, selectFileBtn);
+
   const actionSelect = el('select', { class: 'form-select' },
     el('option', { value: 'annotate' }, '代码注解'),
     el('option', { value: 'explain' }, '代码解释'),
@@ -593,16 +801,8 @@ function renderAICodePage(container) {
   const resultOutput = el('div', { class: 'code-result' }, '选择操作并输入文件路径后开始...');
 
   container.appendChild(createCard('🤖 AI 代码助手',
-    el('div', { class: 'form-row' },
-      el('div', { class: 'form-group' },
-        el('label', { class: 'form-label' }, '文件路径'),
-        fileInput
-      ),
-      el('div', { class: 'form-group' },
-        el('label', { class: 'form-label' }, '操作类型'),
-        actionSelect
-      )
-    ),
+    createFormGroup('文件路径', fileRow),
+    createFormGroup('操作类型', actionSelect),
     el('div', { style: { marginTop: '8px' } },
       createButton('开始分析', () => handleAnalyze())
     )
@@ -611,8 +811,9 @@ function renderAICodePage(container) {
   container.appendChild(createCard('📋 分析结果', resultOutput));
 
   async function handleAnalyze() {
-    if (!fileInput.value.trim()) {
-      showToast('请输入文件路径', 'error');
+    const filePath = fileInput.value.trim();
+    if (!filePath) {
+      showToast('请先输入或选择文件路径', 'error');
       return;
     }
 
@@ -621,24 +822,25 @@ function renderAICodePage(container) {
     resultOutput.appendChild(document.createTextNode(' 正在分析代码...'));
 
     try {
-      const result = await AIAnalyze({
-        file: fileInput.value,
-        action: actionSelect.value
+      const res = await API.aiAnnotate({
+        file: filePath,
+        action: actionSelect.value,
+        language: detectLanguageFromPath(filePath)
       });
-      resultOutput.textContent = result.content || result;
+
+      if (!res || !res.success) {
+        const errMsg = res && res.error ? res.error : '分析失败，请检查配置与文件路径';
+        resultOutput.textContent = `分析失败: ${errMsg}`;
+        showToast('分析失败: ' + errMsg, 'error');
+        return;
+      }
+
+      resultOutput.textContent = res.result || res.content || '';
       showToast('分析完成', 'success');
     } catch (err) {
       resultOutput.textContent = `分析失败: ${err.message}`;
       showToast('分析失败: ' + err.message, 'error');
     }
-  }
-
-  async function AIAnalyze(params) {
-    return await API.aiAnnotate({
-      file: params.file,
-      action: params.action,
-      language: 'javascript'
-    });
   }
 }
 
@@ -647,7 +849,34 @@ function renderAICodePage(container) {
 function renderTeamPage(container) {
   container.appendChild(createPageHeader('团队协作', '管理团队提交规范和协作配置'));
 
+  const pathInput = el('input', {
+    class: 'form-input',
+    placeholder: '留空默认当前目录，或点击右侧选择项目目录',
+    value: getSavedProjectPath()
+  });
+  pathInput.addEventListener('change', () => setSavedProjectPath(pathInput.value));
+
+  const selectDirBtn = el('button', {
+    class: 'btn btn-secondary',
+    style: { whiteSpace: 'nowrap', padding: '0 14px', height: '36px' },
+    onClick: async () => {
+      try {
+        const selected = await API.selectDir();
+        if (selected) {
+          pathInput.value = selected;
+          setSavedProjectPath(selected);
+          loadTeamConfig();
+        }
+      } catch (e) {
+        showToast('选择目录失败: ' + e.message, 'error');
+      }
+    }
+  }, '📁 浏览目录');
+
+  const pathRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, pathInput, selectDirBtn);
   const configOutput = el('div', { class: 'output-log' }, '加载中...');
+
+  container.appendChild(createCard('📂 仓库路径', createFormGroup('项目目录', pathRow)));
 
   container.appendChild(createCard('👥 团队配置',
     configOutput,
@@ -659,31 +888,41 @@ function renderTeamPage(container) {
 
   async function loadTeamConfig() {
     try {
-      const config = await API.readTeamConfig();
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const config = await API.readTeamConfig(targetPath);
       if (!config) {
         configOutput.innerHTML = '<span class="log-warn">⚠ 未找到团队配置文件</span>\n<span class="log-muted">点击"初始化团队配置"创建配置文件</span>';
         return;
       }
       configOutput.innerHTML = [
-        `<span class="log-info">提交规范:</span> ${config.convention || 'angular'}`,
-        `<span class="log-info">提交语言:</span> ${config.language || 'en'}`,
+        `<span class="log-info">提交规范:</span> ${escapeHtml(config.convention || 'angular')}`,
+        `<span class="log-info">提交语言:</span> ${escapeHtml(config.language || 'en')}`,
         `<span class="log-info">强制规范:</span> ${config.enforceConventional ? '是' : '否'}`,
         `<span class="log-info">要求 scope:</span> ${config.requireScope ? '是' : '否'}`,
-        config.allowedTypes ? `<span class="log-info">允许的类型:</span> ${config.allowedTypes.join(', ')}` : ''
+        config.allowedTypes ? `<span class="log-info">允许的类型:</span> ${escapeHtml(config.allowedTypes.join(', '))}` : ''
       ].filter(Boolean).join('\n');
     } catch (err) {
-      configOutput.innerHTML = `<span class="log-error">✗ 加载失败: ${err.message}</span>`;
+      configOutput.innerHTML = `<span class="log-error">✗ 加载失败: ${escapeHtml(err.message)}</span>`;
     }
   }
 
   async function initTeamConfig() {
     try {
-      await API.initTeamConfig({
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const res = await API.initTeamConfig(targetPath, {
         convention: 'angular',
         language: 'en',
         enforceConventional: true,
         requireScope: false
       });
+      if (!res || !res.success) {
+        showToast('初始化失败: ' + (res && res.error ? res.error : '未知错误'), 'error');
+        return;
+      }
       showToast('团队配置初始化成功', 'success');
       loadTeamConfig();
     } catch (err) {
@@ -693,7 +932,14 @@ function renderTeamPage(container) {
 
   async function enforceTeamConfig() {
     try {
-      await API.enforceTeamConfig();
+      const targetPath = pathInput.value.trim() || undefined;
+      if (targetPath) setSavedProjectPath(targetPath);
+
+      const res = await API.enforceTeamConfig(targetPath);
+      if (!res || !res.success) {
+        showToast('安装失败: ' + (res && res.error ? res.error : '未知错误'), 'error');
+        return;
+      }
       showToast('规范钩子安装成功', 'success');
     } catch (err) {
       showToast('安装失败: ' + err.message, 'error');
@@ -712,11 +958,19 @@ function renderSettingsPage(container) {
 
   const apiKeyInput = el('input', { class: 'form-input', type: 'password', placeholder: 'sk-...' });
   const apiBaseInput = el('input', { class: 'form-input', placeholder: 'https://api.openai.com/v1' });
-  const modelSelect = el('select', { class: 'form-select' },
-    el('option', { value: 'gpt-4o-mini' }, 'gpt-4o-mini (快速)'),
-    el('option', { value: 'gpt-4o' }, 'gpt-4o (强大)'),
-    el('option', { value: 'gpt-3.5-turbo' }, 'gpt-3.5-turbo (经济)')
+  const modelList = el('datalist', { id: 'model-presets' },
+    el('option', { value: 'gpt-4o-mini' }),
+    el('option', { value: 'gpt-4o' }),
+    el('option', { value: 'deepseek-chat' }),
+    el('option', { value: 'glm-4-flash' }),
+    el('option', { value: 'qwen-plus' })
   );
+  const modelSelect = el('input', {
+    class: 'form-input',
+    list: 'model-presets',
+    placeholder: '如 gpt-4o-mini、deepseek-chat、glm-4-flash'
+  });
+  container.appendChild(modelList);
   const githubTokenInput = el('input', { class: 'form-input', type: 'password', placeholder: 'ghp_...' });
   const giteeTokenInput = el('input', { class: 'form-input', type: 'password', placeholder: 'gitee_token...' });
   const gitlabTokenInput = el('input', { class: 'form-input', type: 'password', placeholder: 'glpat-...' });
@@ -843,18 +1097,22 @@ function renderSettingsPage(container) {
 
   async function saveSettings() {
     try {
-      await API.writeConfig({
-        apiKey: apiKeyInput.value,
-        apiBase: apiBaseInput.value,
-        model: modelSelect.value,
-        githubToken: githubTokenInput.value,
-        giteeToken: giteeTokenInput.value,
-        gitlabToken: gitlabTokenInput.value,
+      const res = await API.writeConfig({
+        apiKey: apiKeyInput.value.trim(),
+        apiBase: apiBaseInput.value.trim() || 'https://api.openai.com/v1',
+        model: modelSelect.value.trim() || 'gpt-4o-mini',
+        githubToken: githubTokenInput.value.trim(),
+        giteeToken: giteeTokenInput.value.trim(),
+        gitlabToken: gitlabTokenInput.value.trim(),
         convention: conventionSelect.value,
         language: languageSelect.value,
         smartModel: smartToggle.checked,
         enableCache: cacheToggle.checked
       });
+      if (!res || !res.success) {
+        showToast('保存失败: ' + (res && res.error ? res.error : '未知错误'), 'error');
+        return;
+      }
       showToast('配置保存成功', 'success');
       loadSettings();
     } catch (err) {
@@ -864,7 +1122,7 @@ function renderSettingsPage(container) {
 
   async function resetSettings() {
     try {
-      await API.writeConfig({
+      const res = await API.writeConfig({
         apiKey: '',
         apiBase: 'https://api.openai.com/v1',
         model: 'gpt-4o-mini',
@@ -876,6 +1134,10 @@ function renderSettingsPage(container) {
         smartModel: true,
         enableCache: true
       });
+      if (!res || !res.success) {
+        showToast('重置失败: ' + (res && res.error ? res.error : '未知错误'), 'error');
+        return;
+      }
       showToast('已重置为默认配置', 'success');
       loadSettings();
     } catch (err) {

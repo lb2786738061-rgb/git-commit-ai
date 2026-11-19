@@ -22,14 +22,30 @@ export class GitService {
   constructor(private configManager: ConfigManager) {}
 
   /**
-   * 推断当前操作的项目路径：优先当前打开文件所在目录，其次第一个工作区文件夹
+   * 推断当前操作的项目根目录：
+   * 1. 优先返回当前打开文件所属的工作区根目录（兼容多根目录工作区）
+   * 2. 其次返回当前工作区的第一个根目录
+   * 3. 仅在未打开任何工作区文件夹（单独打开文件）时，才回退到该文件所在目录
    */
   static resolveProjectPath(): string | undefined {
+    const folders = vscode.workspace.workspaceFolders;
     const activeUri = vscode.window.activeTextEditor?.document.uri;
+
+    if (folders && folders.length > 0) {
+      if (activeUri && activeUri.scheme === 'file') {
+        const matchedFolder = vscode.workspace.getWorkspaceFolder(activeUri);
+        if (matchedFolder) {
+          return matchedFolder.uri.fsPath;
+        }
+      }
+      return folders[0].uri.fsPath;
+    }
+
     if (activeUri && activeUri.scheme === 'file') {
       return path.dirname(activeUri.fsPath);
     }
-    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+    return undefined;
   }
 
   /**

@@ -137,7 +137,9 @@ export class GitOperations {
       });
       return true;
     } catch (error) {
-      throw new Error(`推送失败: ${error.message}`);
+      const stderr = error.stderr ? error.stderr.toString().trim() : '';
+      const stdout = error.stdout ? error.stdout.toString().trim() : '';
+      throw new Error(`推送失败: ${stderr || stdout || error.message}`);
     }
   }
 
@@ -160,12 +162,17 @@ export class GitOperations {
    * 拉取远程更新
    * @param {string} [remote] 远程仓库名称
    * @param {string} [branch] 分支名称
+   * @param {object} [options] 选项
+   * @param {boolean} [options.allowUnrelatedHistories=false] 是否允许合并无共同历史的仓库
    */
-  async pull(remote, branch) {
+  async pull(remote, branch, options = {}) {
     try {
       const args = ['pull'];
       if (remote) args.push(remote);
       if (branch) args.push(branch);
+      if (options.allowUnrelatedHistories) {
+        args.push('--allow-unrelated-histories');
+      }
       const output = execFileSync('git', args, {
         cwd: this.projectPath,
         stdio: 'pipe',
@@ -182,6 +189,55 @@ export class GitOperations {
         throw conflictErr;
       }
       throw new Error(`拉取失败: ${stderr || error.message}`);
+    }
+  }
+
+  /**
+   * 获取远程仓库现有的分支名称列表
+   * @param {string} [remote='origin']
+   * @returns {Promise<string[]>}
+   */
+  async getRemoteBranches(remote = 'origin') {
+    try {
+      const output = execFileSync('git', ['ls-remote', '--heads', remote], {
+        cwd: this.projectPath,
+        stdio: 'pipe',
+        timeout: 15000
+      }).toString();
+      return output
+        .split('\n')
+        .map(line => line.trim().split(/\s+/)[1] || '')
+        .filter(ref => ref.startsWith('refs/heads/'))
+        .map(ref => ref.replace('refs/heads/', ''));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /**
+   * 检查本地是否存在尚未推送到远程分支的提交
+   * @param {string} [remote='origin']
+   * @param {string} [branch='main']
+   * @returns {Promise<boolean>}
+   */
+  async hasUnpushedCommits(remote = 'origin', branch = 'main') {
+    try {
+      const count = execFileSync('git', ['rev-list', '--count', `${remote}/${branch}..HEAD`], {
+        cwd: this.projectPath,
+        stdio: 'pipe'
+      }).toString().trim();
+      return Number(count) > 0;
+    } catch (_) {
+      // 远程跟踪分支尚未建立时，只要本地存在提交就视为需要推送
+      try {
+        const headCount = execFileSync('git', ['rev-list', '--count', 'HEAD'], {
+          cwd: this.projectPath,
+          stdio: 'pipe'
+        }).toString().trim();
+        return Number(headCount) > 0;
+      } catch (__) {
+        return false;
+      }
     }
   }
 

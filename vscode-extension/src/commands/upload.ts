@@ -12,7 +12,27 @@ import { syncCommand } from './sync';
  * → 在平台创建仓库 → 关联远程 → 推送
  */
 export async function uploadCommand(gitService: GitService, configManager: ConfigManager) {
-  const projectPath = GitService.resolveProjectPath();
+  let projectPath: string | undefined;
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+
+  // 多根目录工作区时，让用户明确选择要上传的整个项目根目录
+  if (workspaceFolders && workspaceFolders.length > 1) {
+    const defaultPath = GitService.resolveProjectPath();
+    const folderPick = await vscode.window.showQuickPick(
+      workspaceFolders.map(folder => ({
+        label: folder.name,
+        description: folder.uri.fsPath === defaultPath ? '当前项目' : undefined,
+        detail: folder.uri.fsPath,
+        fsPath: folder.uri.fsPath
+      })),
+      { title: '选择要上传的项目根目录', placeHolder: '请选择需要上传的整个项目文件夹' }
+    );
+    if (!folderPick) return;
+    projectPath = folderPick.fsPath;
+  } else {
+    projectPath = GitService.resolveProjectPath();
+  }
+
   if (!projectPath) {
     vscode.window.showErrorMessage('请先打开一个项目文件夹');
     return;
@@ -81,6 +101,7 @@ export async function uploadCommand(gitService: GitService, configManager: Confi
       {
         label: `$(check) 确认上传到 ${platformPick.label}`,
         description: `${repoName}${isPrivate ? '（私有）' : '（公开）'}`,
+        detail: `上传目录: ${projectPath}`,
         id: 'yes'
       },
       { label: '$(close) 取消', id: 'no' }

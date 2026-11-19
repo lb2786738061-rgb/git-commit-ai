@@ -7,9 +7,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   readConfig: () => ipcRenderer.invoke('config:read'),
   writeConfig: (config) => ipcRenderer.invoke('config:write', config),
-  readTeamConfig: () => ipcRenderer.invoke('config:readTeam'),
-  initTeamConfig: (config) => ipcRenderer.invoke('config:initTeam', config),
-  enforceTeamConfig: () => ipcRenderer.invoke('config:enforceTeam'),
+  readTeamConfig: (projectPath) => ipcRenderer.invoke('config:readTeam', projectPath),
+  initTeamConfig: (projectPath, config) => ipcRenderer.invoke('config:initTeam', projectPath, config),
+  enforceTeamConfig: (projectPath) => ipcRenderer.invoke('config:enforceTeam', projectPath),
 
   selectDir: () => ipcRenderer.invoke('dialog:selectDir'),
   selectFile: () => ipcRenderer.invoke('dialog:selectFile'),
@@ -18,10 +18,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   gitStatus: (projectPath) => ipcRenderer.invoke('git:status', projectPath),
   gitLog: (projectPath, count) => ipcRenderer.invoke('git:log', projectPath, count),
-  getCommitHistory: (count) => ipcRenderer.invoke('git:log', process.cwd(), count),
-  getStagedDiff: () => ipcRenderer.invoke('git:diff'),
-  generateCommitMessage: () => ipcRenderer.invoke('ai:generateCommit'),
-  commitChanges: (message) => ipcRenderer.invoke('git:commit', message),
+  getCommitHistory: (projectPath, count) => ipcRenderer.invoke('git:log', projectPath, count),
+  getStagedDiff: (projectPath) => ipcRenderer.invoke('git:diff', projectPath),
+  generateCommitMessage: (projectPath) => ipcRenderer.invoke('ai:generateCommit', projectPath),
+  commitChanges: (projectPath, message) => ipcRenderer.invoke('git:commit', projectPath, message),
 
   uploadProject: (options) => ipcRenderer.invoke('project:upload', options),
   downloadProject: (options) => ipcRenderer.invoke('project:download', options),

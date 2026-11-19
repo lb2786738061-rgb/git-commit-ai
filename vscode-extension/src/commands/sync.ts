@@ -47,36 +47,36 @@ export async function syncCommand(gitService: GitService, configManager: ConfigM
       async () => gitService.stageAndGetDiff(projectPath)
     );
 
-    if (!diff || !diff.trim()) {
-      vscode.window.showInformationMessage('没有需要提交的更改');
-      return;
+    let finalMessage: string | undefined;
+
+    if (diff && diff.trim()) {
+      const suggested = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: '正在生成提交信息...', cancellable: false },
+        async () => gitService.generateCommitMessage(diff)
+      );
+
+      // 2. 允许用户编辑提交信息
+      const message = await vscode.window.showInputBox({
+        title: '确认提交信息',
+        value: suggested,
+        ignoreFocusOut: true,
+        validateInput: value => (value.trim() ? null : '提交信息不能为空')
+      });
+      if (!message) return;
+      finalMessage = message.trim();
     }
 
-    const suggested = await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: '正在生成提交信息...', cancellable: false },
-      async () => gitService.generateCommitMessage(diff)
-    );
-
-    // 2. 允许用户编辑提交信息
-    const message = await vscode.window.showInputBox({
-      title: '确认提交信息',
-      value: suggested,
-      ignoreFocusOut: true,
-      validateInput: value => (value.trim() ? null : '提交信息不能为空')
-    });
-    if (!message) return;
-
-    // 3. 提交并推送
+    // 3. 提交并推送（即使当前无新改动，也会同步远程并把本地未推送的提交推到远端）
     const result = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: '正在提交并推送...',
+        title: finalMessage ? '正在提交并推送...' : '正在同步并推送本地提交...',
         cancellable: false
       },
       async (progress) => {
         return gitService.sync({
           projectPath,
-          message: message.trim(),
+          message: finalMessage,
           onProgress: (percent, msg) => {
             progress.report({ message: `${percent}% ${msg}` });
           }
@@ -104,7 +104,8 @@ export async function syncCommand(gitService: GitService, configManager: ConfigM
     } else if (message.includes('多人代码冲突') || error?.isConflict) {
       vscode.window.showErrorMessage(message, { modal: true });
     } else {
-      vscode.window.showErrorMessage(`同步失败: ${message}`);
+      const displayMsg = message.startsWith('同步失败:') ? message : `同步失败: ${message}`;
+      vscode.window.showErrorMessage(displayMsg);
     }
   }
 }

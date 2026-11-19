@@ -95,6 +95,20 @@ export async function uploadProject(options) {
 }
 
 /**
+ * 判断拉取错误是否为“远程仓库中尚不存在目标分支”（如空仓库或本地新建的首次推送分支）
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function isRemoteRefMissing(error) {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    msg.includes("couldn't find remote ref") ||
+    msg.includes('no such ref was fetched') ||
+    msg.includes('remote ref does not exist')
+  );
+}
+
+/**
  * 安全拉取远程仓库最新代码（多人协作防冲突基础）
  * @param {object} options 拉取选项
  * @param {string} options.projectPath 项目路径
@@ -140,6 +154,10 @@ export async function pullProject(options) {
       conflictErr.aiAnalysis = aiAnalysis;
       throw conflictErr;
     }
+    if (isRemoteRefMissing(error)) {
+      const branch = await git.getCurrentBranch().catch(() => 'main');
+      throw new Error(`远程仓库中尚未存在分支 "${branch}"（可能是空仓库、首次推送的新分支，或远程默认分支名不同），请先执行「提交并协同推送」将本地分支推送到远端。`);
+    }
     throw new Error(`更新失败: ${error.message}`);
   }
 }
@@ -174,7 +192,7 @@ export async function syncProject(options) {
     await git.addAll();
 
     const diff = await git.getStagedDiff();
-    const branch = await git.getCurrentBranch();
+    let branch = await git.getCurrentBranch();
 
     let committed = false;
     let commitMessage = message;
@@ -194,11 +212,32 @@ export async function syncProject(options) {
     }
 
     // 2. 推送前先拉取远程更新以融合团队最新代码（多人协作核心步骤）
+    let remoteBranchMissing = false;
     onProgress(70, `拉取 ${remote}/${branch} 远程最新代码以防冲突...`);
     try {
       await git.pull(remote, branch);
     } catch (pullErr) {
-      if (pullErr.isConflict) {
+      const errMsgLower = String(pullErr?.message || '').toLowerCase();
+      if (errMsgLower.includes('refusing to merge unrelated histories')) {
+        // 本地与远程分别独立初始化过，自动允许合并无共同历史
+        onProgress(78, '检测到本地与远程提交历史独立，正在尝试自动融合...');
+        try {
+          await git.pull(remote, branch, { allowUnrelatedHistories: true });
+        } catch (retryErr) {
+          if (retryErr.isConflict) {
+            onProgress(85, '检测到多人代码冲突，正在由 AI 智能体分析冲突...');
+            const conflictFiles = await git.getConflictFiles();
+            const conflictDiff = await git.getConflictDiff(conflictFiles);
+            const aiAnalysis = await analyzeConflict({ conflictFiles, conflictDiff, projectPath });
+            const conflictErr = new Error(`多人代码冲突: 远程与本地发生重叠冲突，已提交本地暂存，请解决冲突后推送。\n\n【冲突文件】:\n${conflictFiles.map(f => ' - ' + f).join('\n')}\n\n【AI 智能体合并建议】:\n${aiAnalysis.suggestions}`);
+            conflictErr.isConflict = true;
+            conflictErr.conflictFiles = conflictFiles;
+            conflictErr.aiAnalysis = aiAnalysis;
+            throw conflictErr;
+          }
+          throw retryErr;
+        }
+      } else if (pullErr.isConflict) {
         onProgress(85, '检测到多人代码冲突，正在由 AI 智能体分析冲突...');
         const conflictFiles = await git.getConflictFiles();
         const conflictDiff = await git.getConflictDiff(conflictFiles);
@@ -208,12 +247,48 @@ export async function syncProject(options) {
         conflictErr.conflictFiles = conflictFiles;
         conflictErr.aiAnalysis = aiAnalysis;
         throw conflictErr;
+      } else if (isRemoteRefMissing(pullErr)) {
+        // 检查远程是否只是默认分支名不同（如本地 main、远程 master，或反之）
+        const remoteBranches = await git.getRemoteBranches(remote);
+        const altBranch = branch === 'main' ? 'master' : (branch === 'master' ? 'main' : '');
+
+        if (altBranch && remoteBranches.includes(altBranch)) {
+          onProgress(75, `检测到远程分支为 ${altBranch}，正在自动对齐本地分支并融合代码...`);
+          await git.setBranch(altBranch);
+          branch = altBranch;
+          try {
+            await git.pull(remote, branch);
+          } catch (alignedErr) {
+            const alignedMsg = String(alignedErr?.message || '').toLowerCase();
+            if (alignedMsg.includes('refusing to merge unrelated histories')) {
+              await git.pull(remote, branch, { allowUnrelatedHistories: true });
+            } else if (alignedErr.isConflict) {
+              onProgress(85, '检测到多人代码冲突，正在由 AI 智能体分析冲突...');
+              const conflictFiles = await git.getConflictFiles();
+              const conflictDiff = await git.getConflictDiff(conflictFiles);
+              const aiAnalysis = await analyzeConflict({ conflictFiles, conflictDiff, projectPath });
+              const conflictErr = new Error(`多人代码冲突: 远程与本地发生重叠冲突，已提交本地暂存，请解决冲突后推送。\n\n【冲突文件】:\n${conflictFiles.map(f => ' - ' + f).join('\n')}\n\n【AI 智能体合并建议】:\n${aiAnalysis.suggestions}`);
+              conflictErr.isConflict = true;
+              conflictErr.conflictFiles = conflictFiles;
+              conflictErr.aiAnalysis = aiAnalysis;
+              throw conflictErr;
+            } else {
+              throw alignedErr;
+            }
+          }
+        } else {
+          // 远程仓库为空或尚无同名分支，属于首次推送场景，直接跳过拉取进入推送流程
+          remoteBranchMissing = true;
+          onProgress(80, `远程尚无 ${branch} 分支，准备首次推送到远端...`);
+        }
+      } else {
+        throw pullErr;
       }
-      throw pullErr;
     }
 
-    // 3. 安全推送到远端
-    if (committed) {
+    // 3. 安全推送到远端（本次有新提交、远程尚无该分支、或本地仍有历史未推送提交时均执行推送）
+    const needPush = committed || remoteBranchMissing || (await git.hasUnpushedCommits(remote, branch));
+    if (needPush) {
       onProgress(90, `推送到远程 ${remote}/${branch}...`);
       await git.push(remote, branch);
       onProgress(100, '协同同步完成！');

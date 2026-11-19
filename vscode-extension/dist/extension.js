@@ -660,7 +660,9 @@ var init_operations = __esm({
           });
           return true;
         } catch (error) {
-          throw new Error(`\u63A8\u9001\u5931\u8D25: ${error.message}`);
+          const stderr = error.stderr ? error.stderr.toString().trim() : "";
+          const stdout = error.stdout ? error.stdout.toString().trim() : "";
+          throw new Error(`\u63A8\u9001\u5931\u8D25: ${stderr || stdout || error.message}`);
         }
       }
       /**
@@ -681,14 +683,19 @@ var init_operations = __esm({
        * 拉取远程更新
        * @param {string} [remote] 远程仓库名称
        * @param {string} [branch] 分支名称
+       * @param {object} [options] 选项
+       * @param {boolean} [options.allowUnrelatedHistories=false] 是否允许合并无共同历史的仓库
        */
-      async pull(remote, branch) {
+      async pull(remote, branch, options = {}) {
         try {
           const args = ["pull"];
           if (remote)
             args.push(remote);
           if (branch)
             args.push(branch);
+          if (options.allowUnrelatedHistories) {
+            args.push("--allow-unrelated-histories");
+          }
           const output = (0, import_child_process.execFileSync)("git", args, {
             cwd: this.projectPath,
             stdio: "pipe",
@@ -706,6 +713,48 @@ ${stderr || stdout}`);
             throw conflictErr;
           }
           throw new Error(`\u62C9\u53D6\u5931\u8D25: ${stderr || error.message}`);
+        }
+      }
+      /**
+       * 获取远程仓库现有的分支名称列表
+       * @param {string} [remote='origin']
+       * @returns {Promise<string[]>}
+       */
+      async getRemoteBranches(remote = "origin") {
+        try {
+          const output = (0, import_child_process.execFileSync)("git", ["ls-remote", "--heads", remote], {
+            cwd: this.projectPath,
+            stdio: "pipe",
+            timeout: 15e3
+          }).toString();
+          return output.split("\n").map((line) => line.trim().split(/\s+/)[1] || "").filter((ref) => ref.startsWith("refs/heads/")).map((ref) => ref.replace("refs/heads/", ""));
+        } catch (_) {
+          return [];
+        }
+      }
+      /**
+       * 检查本地是否存在尚未推送到远程分支的提交
+       * @param {string} [remote='origin']
+       * @param {string} [branch='main']
+       * @returns {Promise<boolean>}
+       */
+      async hasUnpushedCommits(remote = "origin", branch = "main") {
+        try {
+          const count = (0, import_child_process.execFileSync)("git", ["rev-list", "--count", `${remote}/${branch}..HEAD`], {
+            cwd: this.projectPath,
+            stdio: "pipe"
+          }).toString().trim();
+          return Number(count) > 0;
+        } catch (_) {
+          try {
+            const headCount = (0, import_child_process.execFileSync)("git", ["rev-list", "--count", "HEAD"], {
+              cwd: this.projectPath,
+              stdio: "pipe"
+            }).toString().trim();
+            return Number(headCount) > 0;
+          } catch (__) {
+            return false;
+          }
         }
       }
       /**
@@ -1662,6 +1711,10 @@ async function uploadProject(options) {
     throw new Error(`\u4E0A\u4F20\u5931\u8D25: ${error.message}`);
   }
 }
+function isRemoteRefMissing(error) {
+  const msg = String((error == null ? void 0 : error.message) || "").toLowerCase();
+  return msg.includes("couldn't find remote ref") || msg.includes("no such ref was fetched") || msg.includes("remote ref does not exist");
+}
 async function pullProject(options) {
   const {
     projectPath,
@@ -1702,6 +1755,10 @@ ${aiAnalysis.suggestions}`);
       conflictErr.aiAnalysis = aiAnalysis;
       throw conflictErr;
     }
+    if (isRemoteRefMissing(error)) {
+      const branch = await git.getCurrentBranch().catch(() => "main");
+      throw new Error(`\u8FDC\u7A0B\u4ED3\u5E93\u4E2D\u5C1A\u672A\u5B58\u5728\u5206\u652F "${branch}"\uFF08\u53EF\u80FD\u662F\u7A7A\u4ED3\u5E93\u3001\u9996\u6B21\u63A8\u9001\u7684\u65B0\u5206\u652F\uFF0C\u6216\u8FDC\u7A0B\u9ED8\u8BA4\u5206\u652F\u540D\u4E0D\u540C\uFF09\uFF0C\u8BF7\u5148\u6267\u884C\u300C\u63D0\u4EA4\u5E76\u534F\u540C\u63A8\u9001\u300D\u5C06\u672C\u5730\u5206\u652F\u63A8\u9001\u5230\u8FDC\u7AEF\u3002`);
+    }
     throw new Error(`\u66F4\u65B0\u5931\u8D25: ${error.message}`);
   }
 }
@@ -1722,7 +1779,7 @@ async function syncProject(options) {
     onProgress(10, "\u68C0\u67E5\u672C\u5730\u6539\u52A8...");
     await git.addAll();
     const diff = await git.getStagedDiff();
-    const branch = await git.getCurrentBranch();
+    let branch = await git.getCurrentBranch();
     let committed = false;
     let commitMessage = message;
     if (diff && diff.trim()) {
@@ -1736,11 +1793,37 @@ async function syncProject(options) {
     } else {
       onProgress(40, "\u672C\u5730\u65E0\u65B0\u4FEE\u6539\uFF0C\u51C6\u5907\u62C9\u53D6\u8FDC\u7A0B\u66F4\u65B0...");
     }
+    let remoteBranchMissing = false;
     onProgress(70, `\u62C9\u53D6 ${remote}/${branch} \u8FDC\u7A0B\u6700\u65B0\u4EE3\u7801\u4EE5\u9632\u51B2\u7A81...`);
     try {
       await git.pull(remote, branch);
     } catch (pullErr) {
-      if (pullErr.isConflict) {
+      const errMsgLower = String((pullErr == null ? void 0 : pullErr.message) || "").toLowerCase();
+      if (errMsgLower.includes("refusing to merge unrelated histories")) {
+        onProgress(78, "\u68C0\u6D4B\u5230\u672C\u5730\u4E0E\u8FDC\u7A0B\u63D0\u4EA4\u5386\u53F2\u72EC\u7ACB\uFF0C\u6B63\u5728\u5C1D\u8BD5\u81EA\u52A8\u878D\u5408...");
+        try {
+          await git.pull(remote, branch, { allowUnrelatedHistories: true });
+        } catch (retryErr) {
+          if (retryErr.isConflict) {
+            onProgress(85, "\u68C0\u6D4B\u5230\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81\uFF0C\u6B63\u5728\u7531 AI \u667A\u80FD\u4F53\u5206\u6790\u51B2\u7A81...");
+            const conflictFiles = await git.getConflictFiles();
+            const conflictDiff = await git.getConflictDiff(conflictFiles);
+            const aiAnalysis = await analyzeConflict({ conflictFiles, conflictDiff, projectPath });
+            const conflictErr = new Error(`\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81: \u8FDC\u7A0B\u4E0E\u672C\u5730\u53D1\u751F\u91CD\u53E0\u51B2\u7A81\uFF0C\u5DF2\u63D0\u4EA4\u672C\u5730\u6682\u5B58\uFF0C\u8BF7\u89E3\u51B3\u51B2\u7A81\u540E\u63A8\u9001\u3002
+
+\u3010\u51B2\u7A81\u6587\u4EF6\u3011:
+${conflictFiles.map((f) => " - " + f).join("\n")}
+
+\u3010AI \u667A\u80FD\u4F53\u5408\u5E76\u5EFA\u8BAE\u3011:
+${aiAnalysis.suggestions}`);
+            conflictErr.isConflict = true;
+            conflictErr.conflictFiles = conflictFiles;
+            conflictErr.aiAnalysis = aiAnalysis;
+            throw conflictErr;
+          }
+          throw retryErr;
+        }
+      } else if (pullErr.isConflict) {
         onProgress(85, "\u68C0\u6D4B\u5230\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81\uFF0C\u6B63\u5728\u7531 AI \u667A\u80FD\u4F53\u5206\u6790\u51B2\u7A81...");
         const conflictFiles = await git.getConflictFiles();
         const conflictDiff = await git.getConflictDiff(conflictFiles);
@@ -1756,10 +1839,49 @@ ${aiAnalysis.suggestions}`);
         conflictErr.conflictFiles = conflictFiles;
         conflictErr.aiAnalysis = aiAnalysis;
         throw conflictErr;
+      } else if (isRemoteRefMissing(pullErr)) {
+        const remoteBranches = await git.getRemoteBranches(remote);
+        const altBranch = branch === "main" ? "master" : branch === "master" ? "main" : "";
+        if (altBranch && remoteBranches.includes(altBranch)) {
+          onProgress(75, `\u68C0\u6D4B\u5230\u8FDC\u7A0B\u5206\u652F\u4E3A ${altBranch}\uFF0C\u6B63\u5728\u81EA\u52A8\u5BF9\u9F50\u672C\u5730\u5206\u652F\u5E76\u878D\u5408\u4EE3\u7801...`);
+          await git.setBranch(altBranch);
+          branch = altBranch;
+          try {
+            await git.pull(remote, branch);
+          } catch (alignedErr) {
+            const alignedMsg = String((alignedErr == null ? void 0 : alignedErr.message) || "").toLowerCase();
+            if (alignedMsg.includes("refusing to merge unrelated histories")) {
+              await git.pull(remote, branch, { allowUnrelatedHistories: true });
+            } else if (alignedErr.isConflict) {
+              onProgress(85, "\u68C0\u6D4B\u5230\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81\uFF0C\u6B63\u5728\u7531 AI \u667A\u80FD\u4F53\u5206\u6790\u51B2\u7A81...");
+              const conflictFiles = await git.getConflictFiles();
+              const conflictDiff = await git.getConflictDiff(conflictFiles);
+              const aiAnalysis = await analyzeConflict({ conflictFiles, conflictDiff, projectPath });
+              const conflictErr = new Error(`\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81: \u8FDC\u7A0B\u4E0E\u672C\u5730\u53D1\u751F\u91CD\u53E0\u51B2\u7A81\uFF0C\u5DF2\u63D0\u4EA4\u672C\u5730\u6682\u5B58\uFF0C\u8BF7\u89E3\u51B3\u51B2\u7A81\u540E\u63A8\u9001\u3002
+
+\u3010\u51B2\u7A81\u6587\u4EF6\u3011:
+${conflictFiles.map((f) => " - " + f).join("\n")}
+
+\u3010AI \u667A\u80FD\u4F53\u5408\u5E76\u5EFA\u8BAE\u3011:
+${aiAnalysis.suggestions}`);
+              conflictErr.isConflict = true;
+              conflictErr.conflictFiles = conflictFiles;
+              conflictErr.aiAnalysis = aiAnalysis;
+              throw conflictErr;
+            } else {
+              throw alignedErr;
+            }
+          }
+        } else {
+          remoteBranchMissing = true;
+          onProgress(80, `\u8FDC\u7A0B\u5C1A\u65E0 ${branch} \u5206\u652F\uFF0C\u51C6\u5907\u9996\u6B21\u63A8\u9001\u5230\u8FDC\u7AEF...`);
+        }
+      } else {
+        throw pullErr;
       }
-      throw pullErr;
     }
-    if (committed) {
+    const needPush = committed || remoteBranchMissing || await git.hasUnpushedCommits(remote, branch);
+    if (needPush) {
       onProgress(90, `\u63A8\u9001\u5230\u8FDC\u7A0B ${remote}/${branch}...`);
       await git.push(remote, branch);
       onProgress(100, "\u534F\u540C\u540C\u6B65\u5B8C\u6210\uFF01");
@@ -1797,15 +1919,28 @@ var init_gitService = __esm({
         this.configManager = configManager2;
       }
       /**
-       * 推断当前操作的项目路径：优先当前打开文件所在目录，其次第一个工作区文件夹
+       * 推断当前操作的项目根目录：
+       * 1. 优先返回当前打开文件所属的工作区根目录（兼容多根目录工作区）
+       * 2. 其次返回当前工作区的第一个根目录
+       * 3. 仅在未打开任何工作区文件夹（单独打开文件）时，才回退到该文件所在目录
        */
       static resolveProjectPath() {
-        var _a, _b, _c;
+        var _a;
+        const folders = vscode5.workspace.workspaceFolders;
         const activeUri = (_a = vscode5.window.activeTextEditor) == null ? void 0 : _a.document.uri;
+        if (folders && folders.length > 0) {
+          if (activeUri && activeUri.scheme === "file") {
+            const matchedFolder = vscode5.workspace.getWorkspaceFolder(activeUri);
+            if (matchedFolder) {
+              return matchedFolder.uri.fsPath;
+            }
+          }
+          return folders[0].uri.fsPath;
+        }
         if (activeUri && activeUri.scheme === "file") {
           return import_path5.default.dirname(activeUri.fsPath);
         }
-        return (_c = (_b = vscode5.workspace.workspaceFolders) == null ? void 0 : _b[0]) == null ? void 0 : _c.uri.fsPath;
+        return void 0;
       }
       /**
        * 是否是 Git 仓库
@@ -1919,32 +2054,32 @@ async function syncCommand(gitService2, configManager2) {
       { location: vscode6.ProgressLocation.Notification, title: "\u6B63\u5728\u5206\u6790\u53D8\u66F4...", cancellable: false },
       async () => gitService2.stageAndGetDiff(projectPath)
     );
-    if (!diff || !diff.trim()) {
-      vscode6.window.showInformationMessage("\u6CA1\u6709\u9700\u8981\u63D0\u4EA4\u7684\u66F4\u6539");
-      return;
+    let finalMessage;
+    if (diff && diff.trim()) {
+      const suggested = await vscode6.window.withProgress(
+        { location: vscode6.ProgressLocation.Notification, title: "\u6B63\u5728\u751F\u6210\u63D0\u4EA4\u4FE1\u606F...", cancellable: false },
+        async () => gitService2.generateCommitMessage(diff)
+      );
+      const message = await vscode6.window.showInputBox({
+        title: "\u786E\u8BA4\u63D0\u4EA4\u4FE1\u606F",
+        value: suggested,
+        ignoreFocusOut: true,
+        validateInput: (value) => value.trim() ? null : "\u63D0\u4EA4\u4FE1\u606F\u4E0D\u80FD\u4E3A\u7A7A"
+      });
+      if (!message)
+        return;
+      finalMessage = message.trim();
     }
-    const suggested = await vscode6.window.withProgress(
-      { location: vscode6.ProgressLocation.Notification, title: "\u6B63\u5728\u751F\u6210\u63D0\u4EA4\u4FE1\u606F...", cancellable: false },
-      async () => gitService2.generateCommitMessage(diff)
-    );
-    const message = await vscode6.window.showInputBox({
-      title: "\u786E\u8BA4\u63D0\u4EA4\u4FE1\u606F",
-      value: suggested,
-      ignoreFocusOut: true,
-      validateInput: (value) => value.trim() ? null : "\u63D0\u4EA4\u4FE1\u606F\u4E0D\u80FD\u4E3A\u7A7A"
-    });
-    if (!message)
-      return;
     const result = await vscode6.window.withProgress(
       {
         location: vscode6.ProgressLocation.Notification,
-        title: "\u6B63\u5728\u63D0\u4EA4\u5E76\u63A8\u9001...",
+        title: finalMessage ? "\u6B63\u5728\u63D0\u4EA4\u5E76\u63A8\u9001..." : "\u6B63\u5728\u540C\u6B65\u5E76\u63A8\u9001\u672C\u5730\u63D0\u4EA4...",
         cancellable: false
       },
       async (progress) => {
         return gitService2.sync({
           projectPath,
-          message: message.trim(),
+          message: finalMessage,
           onProgress: (percent, msg) => {
             progress.report({ message: `${percent}% ${msg}` });
           }
@@ -1971,7 +2106,8 @@ async function syncCommand(gitService2, configManager2) {
     } else if (message.includes("\u591A\u4EBA\u4EE3\u7801\u51B2\u7A81") || (error == null ? void 0 : error.isConflict)) {
       vscode6.window.showErrorMessage(message, { modal: true });
     } else {
-      vscode6.window.showErrorMessage(`\u540C\u6B65\u5931\u8D25: ${message}`);
+      const displayMsg = message.startsWith("\u540C\u6B65\u5931\u8D25:") ? message : `\u540C\u6B65\u5931\u8D25: ${message}`;
+      vscode6.window.showErrorMessage(displayMsg);
     }
   }
 }
@@ -1990,7 +2126,25 @@ __export(upload_exports, {
   uploadCommand: () => uploadCommand
 });
 async function uploadCommand(gitService2, configManager2) {
-  const projectPath = GitService.resolveProjectPath();
+  let projectPath;
+  const workspaceFolders = vscode7.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders.length > 1) {
+    const defaultPath = GitService.resolveProjectPath();
+    const folderPick = await vscode7.window.showQuickPick(
+      workspaceFolders.map((folder) => ({
+        label: folder.name,
+        description: folder.uri.fsPath === defaultPath ? "\u5F53\u524D\u9879\u76EE" : void 0,
+        detail: folder.uri.fsPath,
+        fsPath: folder.uri.fsPath
+      })),
+      { title: "\u9009\u62E9\u8981\u4E0A\u4F20\u7684\u9879\u76EE\u6839\u76EE\u5F55", placeHolder: "\u8BF7\u9009\u62E9\u9700\u8981\u4E0A\u4F20\u7684\u6574\u4E2A\u9879\u76EE\u6587\u4EF6\u5939" }
+    );
+    if (!folderPick)
+      return;
+    projectPath = folderPick.fsPath;
+  } else {
+    projectPath = GitService.resolveProjectPath();
+  }
   if (!projectPath) {
     vscode7.window.showErrorMessage("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u9879\u76EE\u6587\u4EF6\u5939");
     return;
@@ -2052,6 +2206,7 @@ async function uploadCommand(gitService2, configManager2) {
       {
         label: `$(check) \u786E\u8BA4\u4E0A\u4F20\u5230 ${platformPick.label}`,
         description: `${repoName}${isPrivate ? "\uFF08\u79C1\u6709\uFF09" : "\uFF08\u516C\u5F00\uFF09"}`,
+        detail: `\u4E0A\u4F20\u76EE\u5F55: ${projectPath}`,
         id: "yes"
       },
       { label: "$(close) \u53D6\u6D88", id: "no" }
